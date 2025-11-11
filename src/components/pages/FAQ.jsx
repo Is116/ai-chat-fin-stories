@@ -15,128 +15,128 @@ const FAQ = ({ user, onLogout }) => {
 
   const faqs = [
     {
-      category: "Getting Started",
+      category: t('faq.categories.gettingStarted.title'),
       questions: [
         {
-          question: "What is Literary Chat?",
-          answer: "Literary Chat is an AI-powered platform that allows you to have conversations with your favorite literary characters. Using advanced AI technology, we've brought iconic characters from classic and contemporary literature to life, allowing you to chat with them as if they were real."
+          question: t('faq.categories.gettingStarted.questions.whatIs.q'),
+          answer: t('faq.categories.gettingStarted.questions.whatIs.a')
         },
         {
-          question: "Is Literary Chat free to use?",
-          answer: "Yes! Literary Chat offers a free tier that allows you to create an account and chat with our characters. We also offer premium features for users who want enhanced experiences, including longer conversation history and priority access to new characters."
+          question: t('faq.categories.gettingStarted.questions.isFree.q'),
+          answer: t('faq.categories.gettingStarted.questions.isFree.a')
         },
         {
-          question: "How do I get started?",
-          answer: "Simply create a free account by clicking the 'Sign Up' button, choose a character you'd like to chat with from our collection, and start your conversation! It's that easy."
+          question: t('faq.categories.gettingStarted.questions.howToStart.q'),
+          answer: t('faq.categories.gettingStarted.questions.howToStart.a')
         },
         {
-          question: "Do I need to create an account?",
-          answer: "Yes, you need to create a free account to save your conversations and chat with characters. This also allows us to provide you with a personalized experience and maintain your conversation history across sessions."
+          question: t('faq.categories.gettingStarted.questions.needAccount.q'),
+          answer: t('faq.categories.gettingStarted.questions.needAccount.a')
         }
       ]
     },
     {
-      category: "Characters & Conversations",
+      category: t('faq.categories.charactersConversations.title'),
       questions: [
         {
-          question: "How many characters are available?",
-          answer: "We currently have a growing collection of characters from classic and contemporary literature. Our library includes iconic figures like Sherlock Holmes, Elizabeth Bennet, Hermione Granger, and many more. We're constantly adding new characters based on user requests and literary significance."
+          question: t('faq.categories.charactersConversations.questions.howMany.q'),
+          answer: t('faq.categories.charactersConversations.questions.howMany.a')
         },
         {
-          question: "How authentic are the character responses?",
-          answer: "Our AI is trained to maintain each character's unique personality, speech patterns, and worldview as depicted in their original literary works. Characters respond in ways that are consistent with their backgrounds, time periods, and character development in their respective books."
+          question: t('faq.categories.charactersConversations.questions.authentic.q'),
+          answer: t('faq.categories.charactersConversations.questions.authentic.a')
         },
         {
-          question: "Can I chat with multiple characters?",
-          answer: "Absolutely! You can switch between characters at any time. Each conversation is saved separately, so you can maintain ongoing discussions with different characters and pick up where you left off."
+          question: t('faq.categories.charactersConversations.questions.multiple.q'),
+          answer: t('faq.categories.charactersConversations.questions.multiple.a')
         },
         {
-          question: "Will characters know about modern events?",
-          answer: "No, characters stay true to their literary time periods and contexts. For example, Sherlock Holmes won't know about smartphones or the internet. This authenticity helps maintain the immersive experience of chatting with these iconic figures."
+          question: t('faq.categories.charactersConversations.questions.modernEvents.q'),
+          answer: t('faq.categories.charactersConversations.questions.modernEvents.a')
         },
         {
-          question: "Are conversations private?",
-          answer: "Yes, your conversations are private and saved to your account. Only you can see your chat history with each character."
+          question: t('faq.categories.charactersConversations.questions.private.q'),
+          answer: t('faq.categories.charactersConversations.questions.private.a')
         }
       ]
     },
     {
-      category: "Technical Questions",
+      category: t('faq.categories.technical.title'),
       questions: [
         {
-          question: "What technology powers Literary Chat?",
-          answer: "Literary Chat uses advanced AI language models, specifically Claude AI by Anthropic, to generate authentic character responses. Our platform combines this AI with carefully crafted character profiles to ensure accurate and engaging conversations."
+          question: t('faq.categories.technical.questions.technology.q'),
+          answer: t('faq.categories.technical.questions.technology.a')
         },
         {
-          question: "Can I access Literary Chat on mobile devices?",
-          answer: "Yes! Literary Chat is fully responsive and works seamlessly on desktop computers, tablets, and smartphones. Simply access the website through your mobile browser."
+          question: t('faq.categories.technical.questions.mobile.q'),
+          answer: t('faq.categories.technical.questions.mobile.a')
         },
         {
-          question: "Is there a mobile app?",
-          answer: "Currently, Literary Chat is available as a web application. However, we're working on dedicated mobile apps for iOS and Android. Stay tuned by subscribing to our newsletter for updates!"
+          question: t('faq.categories.technical.questions.mobileApp.q'),
+          answer: t('faq.categories.technical.questions.mobileApp.a')
         },
         {
-          question: "What if I encounter a technical issue?",
-          answer: "If you experience any technical difficulties, please contact our support team through the Contact page. Include details about the issue, and we'll work to resolve it as quickly as possible."
+          question: t('faq.categories.technical.questions.techIssue.q'),
+          answer: t('faq.categories.technical.questions.techIssue.a')
         }
       ]
     },
     {
-      category: "Account & Privacy",
+      category: t('faq.categories.accountPrivacy.title'),
       questions: [
         {
-          question: "How do I reset my password?",
-          answer: "On the login page, click the 'Forgot Password' link. Enter your email address, and we'll send you instructions to reset your password securely."
+          question: t('faq.categories.accountPrivacy.questions.resetPassword.q'),
+          answer: t('faq.categories.accountPrivacy.questions.resetPassword.a')
         },
         {
-          question: "Can I delete my account?",
-          answer: "Yes, you can delete your account at any time from your account settings. Please note that this action is permanent and will delete all your conversation history."
+          question: t('faq.categories.accountPrivacy.questions.deleteAccount.q'),
+          answer: t('faq.categories.accountPrivacy.questions.deleteAccount.a')
         },
         {
-          question: "How is my data used?",
-          answer: "We take your privacy seriously. Your data is used solely to provide and improve our service. We never sell your personal information or share it with third parties. For complete details, please read our Privacy Policy."
+          question: t('faq.categories.accountPrivacy.questions.dataUse.q'),
+          answer: t('faq.categories.accountPrivacy.questions.dataUse.a')
         },
         {
-          question: "Are my conversations used to train the AI?",
-          answer: "Your conversations may be used in aggregate to improve our service quality, but they are anonymized and your personal information is never associated with this data. You can opt out of this in your privacy settings."
+          question: t('faq.categories.accountPrivacy.questions.aiTraining.q'),
+          answer: t('faq.categories.accountPrivacy.questions.aiTraining.a')
         }
       ]
     },
     {
-      category: "Features & Content",
+      category: t('faq.categories.featuresContent.title'),
       questions: [
         {
-          question: "Can I request new characters?",
-          answer: "Yes! We love hearing suggestions from our community. You can submit character requests through our Contact page. While we can't guarantee every request will be added, we carefully consider all suggestions when planning new characters."
+          question: t('faq.categories.featuresContent.questions.requestCharacters.q'),
+          answer: t('faq.categories.featuresContent.questions.requestCharacters.a')
         },
         {
-          question: "How often are new characters added?",
-          answer: "We typically add new characters monthly. The frequency may vary based on development time and character complexity. Subscribe to our newsletter to be notified when new characters are available."
+          question: t('faq.categories.featuresContent.questions.newCharacters.q'),
+          answer: t('faq.categories.featuresContent.questions.newCharacters.a')
         },
         {
-          question: "Can characters reference each other?",
-          answer: "Characters are aware of other literary works and figures from their own time periods or earlier. However, they won't know about works published after their own stories were written."
+          question: t('faq.categories.featuresContent.questions.reference.q'),
+          answer: t('faq.categories.featuresContent.questions.reference.a')
         },
         {
-          question: "Is there a limit to conversation length?",
-          answer: "Free accounts can have conversations with a reasonable message limit per session. Premium accounts have extended or unlimited conversation lengths. Check our pricing page for specific details."
+          question: t('faq.categories.featuresContent.questions.limit.q'),
+          answer: t('faq.categories.featuresContent.questions.limit.a')
         }
       ]
     },
     {
-      category: "Educational Use",
+      category: t('faq.categories.educational.title'),
       questions: [
         {
-          question: "Can teachers use Literary Chat in classrooms?",
-          answer: "Absolutely! Many educators use Literary Chat as a supplementary tool to help students engage with literature. We offer educational discounts and group accounts for schools. Contact us for more information."
+          question: t('faq.categories.educational.questions.teachers.q'),
+          answer: t('faq.categories.educational.questions.teachers.a')
         },
         {
-          question: "Is Literary Chat appropriate for students?",
-          answer: "Yes, Literary Chat is designed to be educational and appropriate for students. All content is based on the original literary works and maintains the integrity of the source material."
+          question: t('faq.categories.educational.questions.appropriate.q'),
+          answer: t('faq.categories.educational.questions.appropriate.a')
         },
         {
-          question: "Can Literary Chat help with homework?",
-          answer: "While Literary Chat can provide insights into characters and their perspectives, it's designed as a supplementary tool for engagement and understanding, not as a replacement for reading the actual books or doing critical analysis."
+          question: t('faq.categories.educational.questions.homework.q'),
+          answer: t('faq.categories.educational.questions.homework.a')
         }
       ]
     }

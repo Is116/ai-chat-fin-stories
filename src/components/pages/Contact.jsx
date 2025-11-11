@@ -80,7 +80,7 @@ const Contact = ({ user, onLogout }) => {
 
                 {/* Contact Methods */}
                 <div className="space-y-4">
-                  <div className="flex items-start gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200/50 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+                  <div className="flex items-start gap-4 p-6 bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                     <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl flex-shrink-0">
                       <Mail className="w-6 h-6 text-white" />
                     </div>
@@ -92,7 +92,7 @@ const Contact = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200/50 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+                  <div className="flex items-start gap-4 p-6 bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                     <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl flex-shrink-0">
                       <Phone className="w-6 h-6 text-white" />
                     </div>
@@ -104,7 +104,7 @@ const Contact = ({ user, onLogout }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-orange-200/50 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+                  <div className="flex items-start gap-4 p-6 bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                     <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-3 rounded-xl flex-shrink-0">
                       <MapPin className="w-6 h-6 text-white" />
                     </div>
@@ -120,7 +120,7 @@ const Contact = ({ user, onLogout }) => {
                 </div>
 
                 {/* Office Hours */}
-                <div className="relative overflow-hidden p-8 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-2xl rounded-2xl">
+                <div className="relative overflow-hidden p-8 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient text-white shadow-2xl rounded-2xl">
                   {/* Animated Background Blobs */}
                   <div className="absolute top-0 left-0 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
                   <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
@@ -153,7 +153,7 @@ const Contact = ({ user, onLogout }) => {
 
               {/* Contact Form */}
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 md:p-12 border-2 border-purple-200/50 shadow-xl rounded-2xl">
+                <div className="bg-white p-8 md:p-12 border border-gray-200 shadow-xl rounded-2xl">
                   <h2 className="text-3xl font-bold mb-8 text-gray-900">
                     {t('contact.sendMessage')}
                   </h2>
@@ -262,7 +262,7 @@ const Contact = ({ user, onLogout }) => {
         </section>
 
         {/* FAQ Teaser */}
-        <section className="relative overflow-hidden py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600">
+        <section className="relative overflow-hidden py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse">
           {/* Animated Background Blobs */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
           <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>

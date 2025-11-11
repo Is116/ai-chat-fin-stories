@@ -70,18 +70,16 @@ const HowItWorks = ({ user, onLogout }) => {
                   </div>
                 </div>
                 <div className="order-1 md:order-2">
-                  <div className="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 p-8 border-2 border-blue-300/50 shadow-xl rounded-2xl h-64 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-200/30 to-purple-200/30"></div>
-                    <UserPlus className="w-32 h-32 text-blue-600 relative z-10" />
+                  <div className="bg-white p-8 border border-gray-200 shadow-xl rounded-2xl h-64 flex items-center justify-center">
+                    <UserPlus className="w-32 h-32 text-blue-500" />
                   </div>
                 </div>
               </div>
 
               {/* Step 2 */}
               <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 p-8 border-2 border-green-300/50 shadow-xl rounded-2xl h-64 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-200/30 to-emerald-200/30"></div>
-                  <BookOpen className="w-32 h-32 text-green-600 relative z-10" />
+                <div className="bg-white p-8 border border-gray-200 shadow-xl rounded-2xl h-64 flex items-center justify-center">
+                  <BookOpen className="w-32 h-32 text-green-500" />
                 </div>
                 <div>
                   <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-8 md:p-12 border border-green-200 shadow-xl rounded-2xl">
@@ -148,18 +146,16 @@ const HowItWorks = ({ user, onLogout }) => {
                   </div>
                 </div>
                 <div className="order-1 md:order-2">
-                  <div className="bg-gradient-to-br from-yellow-100 via-orange-100 to-red-100 p-8 border-2 border-orange-300/50 shadow-xl rounded-2xl h-64 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-200/30 to-orange-200/30"></div>
-                    <MessageSquare className="w-32 h-32 text-orange-600 relative z-10" />
+                  <div className="bg-white p-8 border border-gray-200 shadow-xl rounded-2xl h-64 flex items-center justify-center">
+                    <MessageSquare className="w-32 h-32 text-yellow-500" />
                   </div>
                 </div>
               </div>
 
               {/* Step 4 */}
               <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="bg-gradient-to-br from-pink-100 via-purple-100 to-violet-100 p-8 border-2 border-pink-300/50 shadow-xl rounded-2xl h-64 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pink-200/30 to-purple-200/30"></div>
-                  <Sparkles className="w-32 h-32 text-pink-600 relative z-10" />
+                <div className="bg-white p-8 border border-gray-200 shadow-xl rounded-2xl h-64 flex items-center justify-center">
+                  <Sparkles className="w-32 h-32 text-pink-500" />
                 </div>
                 <div>
                   <div className="bg-gradient-to-br from-pink-50 to-purple-100 p-8 md:p-12 border border-pink-200 shadow-xl rounded-2xl">
@@ -197,25 +193,25 @@ const HowItWorks = ({ user, onLogout }) => {
         </section>
 
         {/* Tips Section */}
-        <section className="py-20 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <section className="py-20 bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">
               {t('howItWorks.tipsTitle')}
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-gradient-to-br from-white to-blue-50 border-2 border-blue-200/50 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+              <div className="bg-white border border-gray-200 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                 <h3 className="text-xl font-bold mb-4 text-gray-900">{t('howItWorks.tip1Title')}</h3>
                 <p className="text-gray-600 leading-relaxed">
                   {t('howItWorks.tip1Text')}
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-white to-purple-50 border-2 border-purple-200/50 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+              <div className="bg-white border border-gray-200 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                 <h3 className="text-xl font-bold mb-4 text-gray-900">{t('howItWorks.tip2Title')}</h3>
                 <p className="text-gray-600 leading-relaxed">
                   {t('howItWorks.tip2Text')}
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-white to-pink-50 border-2 border-pink-200/50 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
+              <div className="bg-white border border-gray-200 p-8 shadow-lg hover:shadow-xl transition-all rounded-2xl">
                 <h3 className="text-xl font-bold mb-4 text-gray-900">{t('howItWorks.tip3Title')}</h3>
                 <p className="text-gray-600 leading-relaxed">
                   {t('howItWorks.tip3Text')}
@@ -226,7 +222,7 @@ const HowItWorks = ({ user, onLogout }) => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white relative overflow-hidden">
+        <section className="py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse text-white relative overflow-hidden">
           {/* Animated background elements */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
@@ -246,13 +242,13 @@ const HowItWorks = ({ user, onLogout }) => {
                 <>
                   <Link
                     to="/signup"
-                    className="bg-white text-purple-600 font-semibold py-4 px-8 text-sm rounded-lg hover:bg-gray-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105"
+                    className="bg-white/20 backdrop-blur-md text-white font-semibold py-4 px-8 text-sm rounded-lg border border-white/30 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl"
                   >
                     {t('howItWorks.createFreeAccount')}
                   </Link>
                   <Link
                     to="/"
-                    className="bg-white/20 backdrop-blur-md text-white font-semibold py-4 px-8 text-sm rounded-lg border-2 border-white/50 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105"
+                    className="bg-white/10 backdrop-blur-sm text-white font-semibold py-4 px-8 text-sm rounded-lg border border-white/20 hover:bg-white/20 transition-all"
                   >
                     {t('howItWorks.browseCharacters')}
                   </Link>
@@ -260,7 +256,7 @@ const HowItWorks = ({ user, onLogout }) => {
               ) : (
                 <Link
                   to="/"
-                  className="bg-white text-purple-600 font-semibold py-4 px-8 text-sm rounded-lg hover:bg-gray-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105"
+                  className="bg-white/20 backdrop-blur-md text-white font-semibold py-4 px-8 text-sm rounded-lg border border-white/30 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl"
                 >
                   {t('howItWorks.startChattingNow')}
                 </Link>

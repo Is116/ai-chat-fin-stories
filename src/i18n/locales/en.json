@@ -277,60 +277,134 @@
     "stillHaveQuestions": "Still Have Questions?",
     "cantFindAnswer": "Can't find the answer you're looking for? Our support team is here to help.",
     "contactSupport": "Contact Support",
-    "gettingStarted": "Getting Started",
-    "charactersConversations": "Characters & Conversations",
-    "technicalQuestions": "Technical Questions",
-    "accountPrivacy": "Account & Privacy",
-    "featuresContent": "Features & Content",
-    "educationalUse": "Educational Use",
-    "q1": "What is Literary Chat?",
-    "a1": "Literary Chat is an AI-powered platform that allows you to have conversations with your favorite literary characters. Using advanced AI technology, we've brought iconic characters from classic and contemporary literature to life, allowing you to chat with them as if they were real.",
-    "q2": "Is Literary Chat free to use?",
-    "a2": "Yes! Literary Chat offers a free tier that allows you to create an account and chat with our characters. We also offer premium features for users who want enhanced experiences, including longer conversation history and priority access to new characters.",
-    "q3": "How do I get started?",
-    "a3": "Simply create a free account by clicking the 'Sign Up' button, choose a character you'd like to chat with from our collection, and start your conversation! It's that easy.",
-    "q4": "Do I need to create an account?",
-    "a4": "Yes, you need to create a free account to save your conversations and chat with characters. This also allows us to provide you with a personalized experience and maintain your conversation history across sessions.",
-    "q5": "How many characters are available?",
-    "a5": "We currently have a growing collection of characters from classic and contemporary literature. Our library includes iconic figures like Sherlock Holmes, Elizabeth Bennet, Hermione Granger, and many more. We're constantly adding new characters based on user requests and literary significance.",
-    "q6": "How authentic are the character responses?",
-    "a6": "Our AI is trained to maintain each character's unique personality, speech patterns, and worldview as depicted in their original literary works. Characters respond in ways that are consistent with their backgrounds, time periods, and character development in their respective books.",
-    "q7": "Can I chat with multiple characters?",
-    "a7": "Absolutely! You can switch between characters at any time. Each conversation is saved separately, so you can maintain ongoing discussions with different characters and pick up where you left off.",
-    "q8": "Will characters know about modern events?",
-    "a8": "No, characters stay true to their literary time periods and contexts. For example, Sherlock Holmes won't know about smartphones or the internet. This authenticity helps maintain the immersive experience of chatting with these iconic figures.",
-    "q9": "Are conversations private?",
-    "a9": "Yes, your conversations are private and saved to your account. Only you can see your chat history with each character.",
-    "q10": "What technology powers Literary Chat?",
-    "a10": "Literary Chat uses advanced AI language models, specifically Claude AI by Anthropic, to generate authentic character responses. Our platform combines this AI with carefully crafted character profiles to ensure accurate and engaging conversations.",
-    "q11": "Can I access Literary Chat on mobile devices?",
-    "a11": "Yes! Literary Chat is fully responsive and works seamlessly on desktop computers, tablets, and smartphones. Simply access the website through your mobile browser.",
-    "q12": "Is there a mobile app?",
-    "a12": "Currently, Literary Chat is available as a web application. However, we're working on dedicated mobile apps for iOS and Android. Stay tuned by subscribing to our newsletter for updates!",
-    "q13": "What if I encounter a technical issue?",
-    "a13": "If you experience any technical difficulties, please contact our support team through the Contact page. Include details about the issue, and we'll work to resolve it as quickly as possible.",
-    "q14": "How do I reset my password?",
-    "a14": "On the login page, click the 'Forgot Password' link. Enter your email address, and we'll send you instructions to reset your password securely.",
-    "q15": "Can I delete my account?",
-    "a15": "Yes, you can delete your account at any time from your account settings. Please note that this action is permanent and will delete all your conversation history.",
-    "q16": "How is my data used?",
-    "a16": "We take your privacy seriously. Your data is used solely to provide and improve our service. We never sell your personal information or share it with third parties. For complete details, please read our Privacy Policy.",
-    "q17": "Are my conversations used to train the AI?",
-    "a17": "Your conversations may be used in aggregate to improve our service quality, but they are anonymized and your personal information is never associated with this data. You can opt out of this in your privacy settings.",
-    "q18": "Can I request new characters?",
-    "a18": "Yes! We love hearing suggestions from our community. You can submit character requests through our Contact page. While we can't guarantee every request will be added, we carefully consider all suggestions when planning new characters.",
-    "q19": "How often are new characters added?",
-    "a19": "We typically add new characters monthly. The frequency may vary based on development time and character complexity. Subscribe to our newsletter to be notified when new characters are available.",
-    "q20": "Can characters reference each other?",
-    "a20": "Characters are aware of other literary works and figures from their own time periods or earlier. However, they won't know about works published after their own stories were written.",
-    "q21": "Is there a limit to conversation length?",
-    "a21": "Free accounts can have conversations with a reasonable message limit per session. Premium accounts have extended or unlimited conversation lengths. Check our pricing page for specific details.",
-    "q22": "Can teachers use Literary Chat in classrooms?",
-    "a22": "Absolutely! Many educators use Literary Chat as a supplementary tool to help students engage with literature. We offer educational discounts and group accounts for schools. Contact us for more information.",
-    "q23": "Is Literary Chat appropriate for students?",
-    "a23": "Yes, Literary Chat is designed to be educational and appropriate for students. All content is based on the original literary works and maintains the integrity of the source material.",
-    "q24": "Can Literary Chat help with homework?",
-    "a24": "While Literary Chat can provide insights into characters and their perspectives, it's designed as a supplementary tool for engagement and understanding, not as a replacement for reading the actual books or doing critical analysis."
+    "categories": {
+      "gettingStarted": {
+        "title": "Getting Started",
+        "questions": {
+          "whatIs": {
+            "q": "What is Literary Chat?",
+            "a": "Literary Chat is an AI-powered platform that allows you to have conversations with your favorite literary characters. Using advanced AI technology, we've brought iconic characters from classic and contemporary literature to life, allowing you to chat with them as if they were real."
+          },
+          "isFree": {
+            "q": "Is Literary Chat free to use?",
+            "a": "Yes! Literary Chat offers a free tier that allows you to create an account and chat with our characters. We also offer premium features for users who want enhanced experiences, including longer conversation history and priority access to new characters."
+          },
+          "howToStart": {
+            "q": "How do I get started?",
+            "a": "Simply create a free account by clicking the 'Sign Up' button, choose a character you'd like to chat with from our collection, and start your conversation! It's that easy."
+          },
+          "needAccount": {
+            "q": "Do I need to create an account?",
+            "a": "Yes, you need to create a free account to save your conversations and chat with characters. This also allows us to provide you with a personalized experience and maintain your conversation history across sessions."
+          }
+        }
+      },
+      "charactersConversations": {
+        "title": "Characters & Conversations",
+        "questions": {
+          "howMany": {
+            "q": "How many characters are available?",
+            "a": "We currently have a growing collection of characters from classic and contemporary literature. Our library includes iconic figures like Sherlock Holmes, Elizabeth Bennet, Hermione Granger, and many more. We're constantly adding new characters based on user requests and literary significance."
+          },
+          "authentic": {
+            "q": "How authentic are the character responses?",
+            "a": "Our AI is trained to maintain each character's unique personality, speech patterns, and worldview as depicted in their original literary works. Characters respond in ways that are consistent with their backgrounds, time periods, and character development in their respective books."
+          },
+          "multiple": {
+            "q": "Can I chat with multiple characters?",
+            "a": "Absolutely! You can switch between characters at any time. Each conversation is saved separately, so you can maintain ongoing discussions with different characters and pick up where you left off."
+          },
+          "modernEvents": {
+            "q": "Will characters know about modern events?",
+            "a": "No, characters stay true to their literary time periods and contexts. For example, Sherlock Holmes won't know about smartphones or the internet. This authenticity helps maintain the immersive experience of chatting with these iconic figures."
+          },
+          "private": {
+            "q": "Are conversations private?",
+            "a": "Yes, your conversations are private and saved to your account. Only you can see your chat history with each character."
+          }
+        }
+      },
+      "technical": {
+        "title": "Technical Questions",
+        "questions": {
+          "technology": {
+            "q": "What technology powers Literary Chat?",
+            "a": "Literary Chat uses advanced AI language models, specifically Claude AI by Anthropic, to generate authentic character responses. Our platform combines this AI with carefully crafted character profiles to ensure accurate and engaging conversations."
+          },
+          "mobile": {
+            "q": "Can I access Literary Chat on mobile devices?",
+            "a": "Yes! Literary Chat is fully responsive and works seamlessly on desktop computers, tablets, and smartphones. Simply access the website through your mobile browser."
+          },
+          "mobileApp": {
+            "q": "Is there a mobile app?",
+            "a": "Currently, Literary Chat is available as a web application. However, we're working on dedicated mobile apps for iOS and Android. Stay tuned by subscribing to our newsletter for updates!"
+          },
+          "techIssue": {
+            "q": "What if I encounter a technical issue?",
+            "a": "If you experience any technical difficulties, please contact our support team through the Contact page. Include details about the issue, and we'll work to resolve it as quickly as possible."
+          }
+        }
+      },
+      "accountPrivacy": {
+        "title": "Account & Privacy",
+        "questions": {
+          "resetPassword": {
+            "q": "How do I reset my password?",
+            "a": "On the login page, click the 'Forgot Password' link. Enter your email address, and we'll send you instructions to reset your password securely."
+          },
+          "deleteAccount": {
+            "q": "Can I delete my account?",
+            "a": "Yes, you can delete your account at any time from your account settings. Please note that this action is permanent and will delete all your conversation history."
+          },
+          "dataUse": {
+            "q": "How is my data used?",
+            "a": "We take your privacy seriously. Your data is used solely to provide and improve our service. We never sell your personal information or share it with third parties. For complete details, please read our Privacy Policy."
+          },
+          "aiTraining": {
+            "q": "Are my conversations used to train the AI?",
+            "a": "Your conversations may be used in aggregate to improve our service quality, but they are anonymized and your personal information is never associated with this data. You can opt out of this in your privacy settings."
+          }
+        }
+      },
+      "featuresContent": {
+        "title": "Features & Content",
+        "questions": {
+          "requestCharacters": {
+            "q": "Can I request new characters?",
+            "a": "Yes! We love hearing suggestions from our community. You can submit character requests through our Contact page. While we can't guarantee every request will be added, we carefully consider all suggestions when planning new characters."
+          },
+          "newCharacters": {
+            "q": "How often are new characters added?",
+            "a": "We typically add new characters monthly. The frequency may vary based on development time and character complexity. Subscribe to our newsletter to be notified when new characters are available."
+          },
+          "reference": {
+            "q": "Can characters reference each other?",
+            "a": "Characters are aware of other literary works and figures from their own time periods or earlier. However, they won't know about works published after their own stories were written."
+          },
+          "limit": {
+            "q": "Is there a limit to conversation length?",
+            "a": "Free accounts can have conversations with a reasonable message limit per session. Premium accounts have extended or unlimited conversation lengths. Check our pricing page for specific details."
+          }
+        }
+      },
+      "educational": {
+        "title": "Educational Use",
+        "questions": {
+          "teachers": {
+            "q": "Can teachers use Literary Chat in classrooms?",
+            "a": "Absolutely! Many educators use Literary Chat as a supplementary tool to help students engage with literature. We offer educational discounts and group accounts for schools. Contact us for more information."
+          },
+          "appropriate": {
+            "q": "Is Literary Chat appropriate for students?",
+            "a": "Yes, Literary Chat is designed to be educational and appropriate for students. All content is based on the original literary works and maintains the integrity of the source material."
+          },
+          "homework": {
+            "q": "Can Literary Chat help with homework?",
+            "a": "While Literary Chat can provide insights into characters and their perspectives, it's designed as a supplementary tool for engagement and understanding, not as a replacement for reading the actual books or doing critical analysis."
+          }
+        }
+      }
+    }
   },
   "bookCharacters": {
     "backToHome": "Back to Home",
@@ -368,84 +442,6 @@
     "defaultCredentials": "Default credentials:",
     "usernameLabel": "username:",
     "passwordLabel": "password:"
-  },
-  "privacy": {
-    "title": "Privacy Policy",
-    "subtitle": "Your privacy is important to us. This policy explains how we collect, use, and protect your data.",
-    "lastUpdated": "Last updated: November 10, 2025",
-    "glanceTitle": "Privacy at a Glance",
-    "secure": "Secure",
-    "secureDesc": "Your data is encrypted and protected",
-    "private": "Private",
-    "privateDesc": "Conversations are only visible to you",
-    "noSelling": "No Selling",
-    "noSellingDesc": "We never sell your personal data",
-    "transparent": "Transparent",
-    "transparentDesc": "Clear policies, no hidden practices",
-    "section1Title": "1. Information We Collect",
-    "section1Intro": "We collect information that you provide directly to us, including:",
-    "section1Item1": "Account Information: Username, email address, and password (encrypted)",
-    "section1Item2": "Profile Information: Optional profile details you choose to provide",
-    "section1Item3": "Conversation Data: Messages you send and receive when chatting with characters",
-    "section1Item4": "Usage Information: How you interact with our service, including pages visited and features used",
-    "section1Item5": "Device Information: Browser type, IP address, operating system, and device identifiers",
-    "section2Title": "2. How We Use Your Information",
-    "section2Intro": "We use the information we collect to:",
-    "section2Item1": "Provide, maintain, and improve our services",
-    "section2Item2": "Create and manage your account",
-    "section2Item3": "Save and retrieve your conversation history",
-    "section2Item4": "Generate AI responses from literary characters",
-    "section2Item5": "Send you technical notices, updates, and support messages",
-    "section2Item6": "Respond to your comments, questions, and customer service requests",
-    "section2Item7": "Analyze usage patterns to improve user experience",
-    "section2Item8": "Detect, prevent, and address technical issues and security vulnerabilities",
-    "section3Title": "3. Information Sharing and Disclosure",
-    "section3Intro": "We do not sell, trade, or rent your personal information to third parties. We may share your information only in the following circumstances:",
-    "section3Item1": "Service Providers: With third-party vendors who perform services on our behalf (e.g., hosting, analytics)",
-    "section3Item2": "AI Processing: Your messages are processed by Claude AI (Anthropic) to generate character responses",
-    "section3Item3": "Legal Requirements: When required by law or to protect our rights and safety",
-    "section3Item4": "Business Transfers: In connection with a merger, acquisition, or sale of assets",
-    "section3Item5": "With Your Consent: When you explicitly authorize us to share information",
-    "section4Title": "4. Data Security",
-    "section4Intro": "We take reasonable measures to help protect your personal information from loss, theft, misuse, unauthorized access, disclosure, alteration, and destruction. These measures include:",
-    "section4Item1": "Encryption of data in transit and at rest",
-    "section4Item2": "Secure password hashing",
-    "section4Item3": "Regular security assessments and updates",
-    "section4Item4": "Limited access to personal information by employees",
-    "section4Item5": "Monitoring for suspicious activity",
-    "section4Note": "However, no method of transmission over the Internet or electronic storage is 100% secure. While we strive to protect your information, we cannot guarantee its absolute security.",
-    "section5Title": "5. Your Rights and Choices",
-    "section5Intro": "You have the following rights regarding your personal information:",
-    "section5Item1": "Access: Request a copy of the personal information we hold about you",
-    "section5Item2": "Correction: Update or correct your personal information",
-    "section5Item3": "Deletion: Request deletion of your account and associated data",
-    "section5Item4": "Opt-out: Unsubscribe from marketing emails at any time",
-    "section5Item5": "Data Portability: Request a copy of your data in a portable format",
-    "section5Item6": "Restriction: Request limitation of processing of your personal information",
-    "section5Note": "To exercise these rights, please contact us through our Contact page or email us at privacy@literarychat.com.",
-    "section6Title": "6. Cookies and Tracking Technologies",
-    "section6Intro": "We use cookies and similar tracking technologies to collect information about your browsing activities. This helps us:",
-    "section6Item1": "Remember your preferences and settings",
-    "section6Item2": "Keep you logged in",
-    "section6Item3": "Understand how you use our service",
-    "section6Item4": "Improve our platform based on usage patterns",
-    "section6Note": "You can control cookies through your browser settings. However, disabling cookies may affect your ability to use certain features.",
-    "section7Title": "7. Children's Privacy",
-    "section7Text": "Literary Chat is not directed to children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us, and we will delete such information.",
-    "section8Title": "8. International Data Transfers",
-    "section8Text": "Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. By using our service, you consent to the transfer of your information to these countries.",
-    "section9Title": "9. Changes to This Policy",
-    "section9Text1": "We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the \"Last updated\" date. Significant changes will be communicated via email or a prominent notice on our service.",
-    "section9Text2": "Your continued use of Literary Chat after changes are posted constitutes your acceptance of the updated policy.",
-    "section10Title": "10. Contact Us",
-    "section10Intro": "If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:",
-    "contactTeam": "Literary Chat Privacy Team",
-    "contactEmail": "Email: privacy@literarychat.com",
-    "contactAddress": "Address: 123 Literary Lane, Book City, BC 12345",
-    "contactPhone": "Phone: +1 (555) 123-4567",
-    "questionsTitle": "Questions About Privacy?",
-    "questionsSubtitle": "Our team is here to help address any privacy concerns you may have.",
-    "contactUs": "Contact Us"
   },
   "common": {
     "loading": "Loading...",

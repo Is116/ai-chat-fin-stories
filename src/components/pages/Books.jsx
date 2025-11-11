@@ -227,7 +227,7 @@ const Books = ({ user, onLogout }) => {
         </section>
 
         {/* CTA Section */}
-        <section className="relative overflow-hidden py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white">
+        <section className="relative overflow-hidden py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse text-white">
           {/* Animated Background Blobs */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
           <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>

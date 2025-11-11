@@ -276,7 +276,135 @@
     "subtitle": "Löydä vastauksia yleisiin kysymyksiin Literary Chatista",
     "stillHaveQuestions": "Onko sinulla vielä kysymyksiä?",
     "cantFindAnswer": "Etkö löydä etsimääsi vastausta? Tukitiimimme on täällä auttamassa.",
-    "contactSupport": "Ota yhteyttä tukeen"
+    "contactSupport": "Ota yhteyttä tukeen",
+    "categories": {
+      "gettingStarted": {
+        "title": "Alkuun pääseminen",
+        "questions": {
+          "whatIs": {
+            "q": "Mikä on Literary Chat?",
+            "a": "Literary Chat on tekoälyyn perustuva alusta, jonka avulla voit keskustella suosikki kirjallisuushahmojen kanssa. Kehittyneen tekoälyteknologian avulla olemme herättäneet klassisen ja nykyaikaisen kirjallisuuden ikonisia hahmoja eloon, jotta voit keskustella heidän kanssaan kuin he olisivat todellisia."
+          },
+          "isFree": {
+            "q": "Onko Literary Chat ilmainen?",
+            "a": "Kyllä! Literary Chat tarjoaa ilmaisen tason, jonka avulla voit luoda tilin ja keskustella hahmojen kanssa. Tarjoamme myös premium-ominaisuuksia käyttäjille, jotka haluavat parannettuja kokemuksia, mukaan lukien pidemmän keskusteluhistorian ja etuoikeuden uusiin hahmoihin."
+          },
+          "howToStart": {
+            "q": "Kuinka pääsen alkuun?",
+            "a": "Luo yksinkertaisesti ilmainen tili napsauttamalla 'Rekisteröidy'-painiketta, valitse hahmo, jonka kanssa haluat keskustella, ja aloita keskustelu! Se on niin helppoa."
+          },
+          "needAccount": {
+            "q": "Tarvitsenko tilin?",
+            "a": "Kyllä, sinun on luotava ilmainen tili tallentaaksesi keskustelusi ja keskustellaksesi hahmojen kanssa. Tämä mahdollistaa myös henkilökohtaisen kokemuksen ja keskusteluhistoriasi säilyttämisen istuntojen välillä."
+          }
+        }
+      },
+      "charactersConversations": {
+        "title": "Hahmot & Keskustelut",
+        "questions": {
+          "howMany": {
+            "q": "Kuinka monta hahmoa on saatavilla?",
+            "a": "Meillä on tällä hetkellä kasvava kokoelma hahmoja klassisesta ja nykyaikaisesta kirjallisuudesta. Kirjastomme sisältää ikonisia hahmoja kuten Sherlock Holmes, Elizabeth Bennet, Hermione Granger ja monet muut. Lisäämme jatkuvasti uusia hahmoja käyttäjien pyyntöjen ja kirjallisen merkityksen perusteella."
+          },
+          "authentic": {
+            "q": "Kuinka autenttisia hahmojen vastaukset ovat?",
+            "a": "Tekoälymme on koulutettu säilyttämään kunkin hahmon ainutlaatuinen persoonallisuus, puhemalli ja maailmankuva, kuten alkuperäisissä kirjallisissa teoksissaan esitetty. Hahmot vastaavat tavalla, joka on yhdenmukainen heidän taustansa, aikakautensa ja hahmonkehityksensä kanssa."
+          },
+          "multiple": {
+            "q": "Voinko keskustella useiden hahmojen kanssa?",
+            "a": "Ehdottomasti! Voit vaihtaa hahmojen välillä milloin tahansa. Jokainen keskustelu tallennetaan erikseen, joten voit jatkaa käynnissä olevia keskusteluja eri hahmojen kanssa ja jatkaa siitä mihin jäit."
+          },
+          "modernEvents": {
+            "q": "Tietävätkö hahmot nykyaikaisista tapahtumista?",
+            "a": "Ei, hahmot pysyvät uskollisina kirjallisille aikakausilleen ja konteksteilleen. Esimerkiksi Sherlock Holmes ei tiedä älypuhelimista tai internetistä. Tämä autenttisuus auttaa ylläpitämään mukaansatempaavaa kokemusta keskusteluissa näiden ikonisten hahmojen kanssa."
+          },
+          "private": {
+            "q": "Ovatko keskustelut yksityisiä?",
+            "a": "Kyllä, keskustelusi ovat yksityisiä ja tallennetaan tilillesi. Vain sinä voit nähdä keskusteluhistoriasi kunkin hahmon kanssa."
+          }
+        }
+      },
+      "technical": {
+        "title": "Tekniset kysymykset",
+        "questions": {
+          "technology": {
+            "q": "Mikä teknologia tukee Literary Chatia?",
+            "a": "Literary Chat käyttää kehittyneitä tekoälyn kielimalleja, erityisesti Anthropicin Claude AI:ta, tuottaakseen autenttisia hahmovastauksia. Alustamme yhdistää tämän tekoälyn huolellisesti laadittuihin hahmoprofiileihin varmistaakseen tarkat ja mukaansatempaavat keskustelut."
+          },
+          "mobile": {
+            "q": "Voinko käyttää Literary Chatia mobiililaitteilla?",
+            "a": "Kyllä! Literary Chat on täysin responsiivinen ja toimii saumattomasti pöytätietokoneilla, tableteilla ja älypuhelimilla. Käytä sivustoa mobiiliselaimesi kautta."
+          },
+          "mobileApp": {
+            "q": "Onko mobiilisovellusta?",
+            "a": "Tällä hetkellä Literary Chat on saatavilla verkkosovelluksena. Työskentelemme kuitenkin omistautuneiden mobiilisovellusten parissa iOS:lle ja Androidille. Pysy ajan tasalla tilaamalla uutiskirjeemme päivityksiä varten!"
+          },
+          "techIssue": {
+            "q": "Entä jos kohtaan teknisen ongelman?",
+            "a": "Jos kohtaat teknisiä vaikeuksia, ota yhteyttä tukitiimiimme Yhteystiedot-sivun kautta. Sisällytä tiedot ongelmasta, niin pyrimme ratkaisemaan sen mahdollisimman nopeasti."
+          }
+        }
+      },
+      "accountPrivacy": {
+        "title": "Tili & Yksityisyys",
+        "questions": {
+          "resetPassword": {
+            "q": "Kuinka nollaan salasanani?",
+            "a": "Kirjautumissivulla napsauta 'Unohditko salasanan?' -linkkiä. Syötä sähköpostiosoitteesi, niin lähetämme sinulle ohjeet salasanan nollaamiseen turvallisesti."
+          },
+          "deleteAccount": {
+            "q": "Voinko poistaa tilini?",
+            "a": "Kyllä, voit poistaa tilisi milloin tahansa tilin asetuksista. Huomaa, että tämä toimenpide on pysyvä ja poistaa kaikki keskusteluhistoriasi."
+          },
+          "dataUse": {
+            "q": "Kuinka tietojani käytetään?",
+            "a": "Otamme yksityisyytesi vakavasti. Tietojasi käytetään ainoastaan palvelumme tarjoamiseen ja parantamiseen. Emme koskaan myy henkilökohtaisia tietojasi tai jaa niitä kolmansille osapuolille. Täydelliset tiedot löydät Tietosuojakäytännöstämme."
+          },
+          "aiTraining": {
+            "q": "Käytetäänkö keskustelujani tekoälyn kouluttamiseen?",
+            "a": "Keskustelujasi saatetaan käyttää aggregoituna palvelun laadun parantamiseen, mutta ne anonymisoidaan eikä henkilökohtaisia tietojasi koskaan liitetä näihin tietoihin. Voit kieltäytyä tästä yksityisyysasetuksistasi."
+          }
+        }
+      },
+      "featuresContent": {
+        "title": "Ominaisuudet & Sisältö",
+        "questions": {
+          "requestCharacters": {
+            "q": "Voinko pyytää uusia hahmoja?",
+            "a": "Kyllä! Rakastamme kuulla ehdotuksia yhteisöltämme. Voit lähettää hahmopyyntöjä Yhteystiedot-sivun kautta. Emme voi taata, että jokainen pyyntö lisätään, mutta harkitsemme huolellisesti kaikkia ehdotuksia suunnitellessamme uusia hahmoja."
+          },
+          "newCharacters": {
+            "q": "Kuinka usein uusia hahmoja lisätään?",
+            "a": "Lisäämme tyypillisesti uusia hahmoja kuukausittain. Tiheys voi vaihdella kehitysajan ja hahmon monimutkaisuuden perusteella. Tilaa uutiskirjeemme saadaksesi ilmoituksen uusista hahmoista."
+          },
+          "reference": {
+            "q": "Voivatko hahmot viitata toisiinsa?",
+            "a": "Hahmot tietävät muista kirjallisista teoksista ja hahmoista omalta aikakaudeltaan tai aikaisemmin. He eivät kuitenkaan tiedä teoksista, jotka on julkaistu heidän oman tarinansa jälkeen."
+          },
+          "limit": {
+            "q": "Onko keskustelun pituudelle rajaa?",
+            "a": "Ilmaisilla tileillä voi käydä keskusteluja kohtuullisella viestirajoituksella istuntoa kohti. Premium-tileillä on laajennettu tai rajoittamaton keskustelupituus. Tarkista hinnoittelusivultamme tarkat tiedot."
+          }
+        }
+      },
+      "educational": {
+        "title": "Opetuskäyttö",
+        "questions": {
+          "teachers": {
+            "q": "Voivatko opettajat käyttää Literary Chatia luokkahuoneissa?",
+            "a": "Ehdottomasti! Monet kouluttajat käyttävät Literary Chatia täydentävänä työkaluna auttaakseen opiskelijoita sitoutumaan kirjallisuuteen. Tarjoamme koulutusalennuksia ja ryhmätilejä kouluille. Ota yhteyttä saadaksesi lisätietoja."
+          },
+          "appropriate": {
+            "q": "Onko Literary Chat sopiva opiskelijoille?",
+            "a": "Kyllä, Literary Chat on suunniteltu opettavaiseksi ja sopivaksi opiskelijoille. Kaikki sisältö perustuu alkuperäisiin kirjallisiin teoksiin ja säilyttää lähdeaineiston eheyden."
+          },
+          "homework": {
+            "q": "Voiko Literary Chat auttaa kotitehtävissä?",
+            "a": "Vaikka Literary Chat voi tarjota oivalluksia hahmoihin ja heidän näkökulmiinsa, se on suunniteltu täydentäväksi työkaluksi sitoutumiseen ja ymmärtämiseen, ei korvaamaan varsinaisten kirjojen lukemista tai kriittistä analyysiä."
+          }
+        }
+      }
+    }
   },
   "bookCharacters": {
     "backToHome": "Takaisin etusivulle",

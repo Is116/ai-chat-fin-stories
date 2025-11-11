@@ -85,19 +85,19 @@ function UserSignup({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mb-4 shadow-xl border border-white/30">
             <UserPlus className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.signupTitle')}</h1>
-          <p className="text-gray-600">{t('auth.signupSubtitle')}</p>
+          <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">{t('auth.signupTitle')}</h1>
+          <p className="text-white/90 drop-shadow">{t('auth.signupSubtitle')}</p>
         </div>
 
         {/* Signup Form */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-red-50 border border-red-300 rounded-lg p-4 flex items-start gap-3">
@@ -223,7 +223,7 @@ function UserSignup({ onLogin }) {
         <div className="mt-6 text-center">
           <Link
             to="/"
-            className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            className="text-white/90 hover:text-white font-medium transition-colors drop-shadow"
           >
             ← {t('nav.home')}
           </Link>

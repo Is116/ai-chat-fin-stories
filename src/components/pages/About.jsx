@@ -124,7 +124,7 @@ const About = ({ user, onLogout }) => {
         </section>
 
         {/* Values Section */}
-        <section className="py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white relative overflow-hidden">
+        <section className="py-20 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse text-white relative overflow-hidden">
           {/* Animated background elements */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
@@ -139,25 +139,25 @@ const About = ({ user, onLogout }) => {
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-white/20 backdrop-blur-md border border-white/30 p-8 rounded-2xl hover:bg-white/25 transition-all shadow-xl">
                 <h3 className="text-2xl font-bold mb-4 drop-shadow">{t('about.authenticityTitle')}</h3>
-                <p className="text-white/90 leading-relaxed">
+                <p className="text-white/90 leading-relaxed drop-shadow">
                   {t('about.authenticityText')}
                 </p>
               </div>
               <div className="bg-white/20 backdrop-blur-md border border-white/30 p-8 rounded-2xl hover:bg-white/25 transition-all shadow-xl">
                 <h3 className="text-2xl font-bold mb-4 drop-shadow">{t('about.innovationTitle')}</h3>
-                <p className="text-white/90 leading-relaxed">
+                <p className="text-white/90 leading-relaxed drop-shadow">
                   {t('about.innovationText')}
                 </p>
               </div>
               <div className="bg-white/20 backdrop-blur-md border border-white/30 p-8 rounded-2xl hover:bg-white/25 transition-all shadow-xl">
                 <h3 className="text-2xl font-bold mb-4 drop-shadow">{t('about.accessibilityTitle')}</h3>
-                <p className="text-white/90 leading-relaxed">
+                <p className="text-white/90 leading-relaxed drop-shadow">
                   {t('about.accessibilityText')}
                 </p>
               </div>
               <div className="bg-white/20 backdrop-blur-md border border-white/30 p-8 rounded-2xl hover:bg-white/25 transition-all shadow-xl">
                 <h3 className="text-2xl font-bold mb-4 drop-shadow">{t('about.educationTitle')}</h3>
-                <p className="text-white/90 leading-relaxed">
+                <p className="text-white/90 leading-relaxed drop-shadow">
                   {t('about.educationText')}
                 </p>
               </div>

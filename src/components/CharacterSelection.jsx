@@ -180,25 +180,25 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Login Prompt Banner */}
       {!user && (
-        <div className="mx-6 mt-6 mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl border border-blue-500/30">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 animate-gradient-fast border-b border-blue-700 shadow-lg">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-white">
                 <LogIn className="w-5 h-5" />
-                <p className="font-medium text-sm md:text-base">
+                <p className="font-medium text-base">
                   {t('hero.loginPrompt')}
                 </p>
               </div>
               <div className="flex gap-3">
                 <Link
                   to="/login"
-                  className="bg-white text-blue-600 font-semibold py-2 md:py-2.5 px-5 md:px-6 rounded-lg text-xs md:text-sm hover:bg-gray-50 transition-all shadow-md hover:shadow-lg"
+                  className="bg-white text-blue-600 font-semibold py-2.5 px-6 rounded-lg text-sm hover:bg-gray-50 transition-all shadow-md hover:shadow-lg"
                 >
                   {t('auth.loginButton')}
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-white/10 backdrop-blur-sm text-white font-semibold py-2 md:py-2.5 px-5 md:px-6 rounded-lg text-xs md:text-sm border border-white/30 hover:bg-white/20 transition-all"
+                  className="bg-white/10 backdrop-blur-sm text-white font-semibold py-2.5 px-6 rounded-lg text-sm border border-white/30 hover:bg-white/20 transition-all"
                 >
                   {t('auth.signupButton')}
                 </Link>
@@ -209,37 +209,37 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
       )}
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white mx-6 mt-6 rounded-3xl shadow-2xl">
-        <div className="max-w-7xl mx-auto px-6 py-16 md:py-20 lg:py-32">
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-gradient text-white">
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-32">
           <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4 md:mb-6 border border-white/20">
-              <Sparkles className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="text-xs md:text-sm font-medium tracking-wide">Powered by Claude AI</span>
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6 border border-white/20">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium tracking-wide">Powered by Claude AI</span>
             </div>
             
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               {t('hero.title').split('\n')[0]}<br />
               <span className="bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">
                 {t('hero.title').split('\n')[1] || 'Favorite Characters'}
               </span>
             </h1>
             
-            <p className="text-base md:text-lg lg:text-xl font-normal mb-6 md:mb-8 max-w-2xl leading-relaxed text-white/90">
+            <p className="text-lg md:text-xl font-normal mb-8 max-w-2xl leading-relaxed text-white/90">
               {t('hero.subtitle')}
             </p>
             
-            <div className="flex flex-wrap gap-2 md:gap-3 text-xs md:text-sm font-medium">
-              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
-                <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
+            <div className="flex flex-wrap gap-3 text-sm font-medium">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
+                <BookOpen className="w-4 h-4" />
                 <span>{books.length} {books.length !== 1 ? t('hero.classicBooksPlural') : t('hero.classicBooks')}</span>
               </div>
-              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <span>{filteredCharacters.length} {filteredCharacters.length !== 1 ? t('hero.literaryIconsPlural') : t('hero.literaryIcons')}</span>
               </div>
-              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <span>{t('hero.realtimeResponses')}</span>
               </div>
-              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                 <span>{t('hero.authenticPersonalities')}</span>
               </div>
             </div>
@@ -587,42 +587,42 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
       </div>
 
       {/* How It Works - Detailed */}
-      <div className="bg-white py-16 md:py-20">
+      <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">{t('howItWorks.title')}</h2>
-            <p className="text-base md:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">{t('howItWorks.title')}</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               {t('howItWorks.subtitle')}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
-                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">1</span>
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-xl">
+                <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">1</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step1.title')}</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.step1.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
                 {t('howItWorks.step1.description')}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="bg-gradient-to-br from-purple-100 to-pink-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
-                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">2</span>
+              <div className="bg-gradient-to-br from-purple-100 to-pink-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-xl">
+                <span className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">2</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step2.title')}</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.step2.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
                 {t('howItWorks.step2.description')}
               </p>
             </div>
 
             <div className="text-center">
-              <div className="bg-gradient-to-br from-pink-100 to-red-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
-                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">3</span>
+              <div className="bg-gradient-to-br from-pink-100 to-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-xl">
+                <span className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">3</span>
               </div>
-              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step3.title')}</h3>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+              <h3 className="text-2xl font-bold mb-3">{t('howItWorks.step3.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
                 {t('howItWorks.step3.description')}
               </p>
             </div>
@@ -632,7 +632,7 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
 
       {/* CTA Section */}
       {!user && (
-        <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 py-16 md:py-20 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 animate-gradient-pulse py-20 relative overflow-hidden">
           {/* Animated background elements */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
@@ -641,50 +641,50 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
           </div>
           
           <div className="max-w-4xl mx-auto px-6 text-center text-white relative z-10">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 drop-shadow-lg">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 drop-shadow-lg">
               {t('cta.title')}
             </h2>
-            <p className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 text-white/90 max-w-2xl mx-auto drop-shadow">
+            <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto drop-shadow">
               {t('cta.subtitle')}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/signup"
-                className="bg-white text-purple-600 font-bold py-3 md:py-4 px-8 md:px-10 rounded-xl text-base md:text-lg hover:bg-gray-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105 hover:-translate-y-1"
+                className="bg-white text-purple-600 font-bold py-4 px-10 rounded-xl text-lg hover:bg-gray-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105 hover:-translate-y-1"
               >
                 {t('cta.getStartedFree')}
               </Link>
               <Link
                 to="/login"
-                className="bg-white/20 backdrop-blur-md text-white font-bold py-3 md:py-4 px-8 md:px-10 rounded-xl text-base md:text-lg border-2 border-white/50 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105"
+                className="bg-white/20 backdrop-blur-md text-white font-bold py-4 px-10 rounded-xl text-lg border-2 border-white/50 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105"
               >
                 {t('cta.signIn')}
               </Link>
             </div>
-            <p className="mt-4 md:mt-6 text-xs md:text-sm text-white/80 drop-shadow">{t('cta.noCreditCard')}</p>
+            <p className="mt-6 text-sm text-white/80 drop-shadow">{t('cta.noCreditCard')}</p>
           </div>
         </div>
       )}
 
       {/* Footer Info */}
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-12 md:py-16">
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.authenticConversations')}</h3>
-              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+              <h3 className="text-xl font-bold mb-3">{t('cta.authenticConversations')}</h3>
+              <p className="text-gray-600 font-normal leading-relaxed">
                 {t('cta.authenticConversationsText')}
               </p>
             </div>
             <div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.stayInCharacter')}</h3>
-              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+              <h3 className="text-xl font-bold mb-3">{t('cta.stayInCharacter')}</h3>
+              <p className="text-gray-600 font-normal leading-relaxed">
                 {t('cta.stayInCharacterText')}
               </p>
             </div>
             <div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.endlessPossibilities')}</h3>
-              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+              <h3 className="text-xl font-bold mb-3">{t('cta.endlessPossibilities')}</h3>
+              <p className="text-gray-600 font-normal leading-relaxed">
                 {t('cta.endlessPossibilitiesText')}
               </p>
             </div>

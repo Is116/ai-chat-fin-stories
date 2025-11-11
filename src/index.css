@@ -82,6 +82,57 @@ h1, h2, h3, h4, h5, h6 {
   animation-delay: 4s;
 }
 
+/* Animated gradient background */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Faster gradient animation */
+@keyframes gradient-fast {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-fast {
+  background-size: 300% 300%;
+  animation: gradient-fast 6s ease infinite;
+}
+
+/* Smooth gradient pulse */
+@keyframes gradient-pulse {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-pulse {
+  background-size: 400% 400%;
+  animation: gradient-pulse 10s ease infinite;
+}
+
 body > .skiptranslate iframe {
   visibility: hidden !important;
   position: absolute !important;
