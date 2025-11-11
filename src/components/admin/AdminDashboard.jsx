@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, LogOut, User as UserIcon, Users, BookOpen, Shield, MessageSquare, Library, ChevronDown, ChevronRight, Upload, X } from 'lucide-react';
+import { Plus, Edit, Trash2, LogOut, User as UserIcon, Users, BookOpen, Shield, MessageSquare, Library, ChevronDown, ChevronRight, Upload, X, Search, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 
 const AdminDashboard = ({ admin, onLogout }) => {
   const [activeTab, setActiveTab] = useState('books'); // 'books', 'characters', or 'users'
@@ -14,6 +14,48 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [editingBook, setEditingBook] = useState(null);
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [selectedCharacter, setSelectedCharacter] = useState(null); // For viewing character details
+  
+  // Filtering and Pagination for Books
+  const [searchQuery, setSearchQuery] = useState('');
+  const [genreFilter, setGenreFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [booksPerPage] = useState(5);
+  
+  // Filtering and Pagination for Characters
+  const [characterSearchQuery, setCharacterSearchQuery] = useState('');
+  const [characterBookFilter, setCharacterBookFilter] = useState('all');
+  const [characterCurrentPage, setCharacterCurrentPage] = useState(1);
+  const [charactersPerPage] = useState(6);
+  
+  // Filtering and Pagination for Users
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [userCurrentPage, setUserCurrentPage] = useState(1);
+  const [usersPerPage] = useState(10);
+  
+  // Role editing
+  const [editingUserRole, setEditingUserRole] = useState(null);
+  const [selectedRole, setSelectedRole] = useState('');
+  
+  // User editing
+  const [editingUser, setEditingUser] = useState(null);
+  const [userFormData, setUserFormData] = useState({
+    username: '',
+    email: '',
+    full_name: '',
+    password: ''
+  });
+  
+  // Add user
+  const [showAddUserForm, setShowAddUserForm] = useState(false);
+  const [newUserFormData, setNewUserFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    full_name: '',
+    role: 'user'
+  });
+  
   const navigate = useNavigate();
 
   const [bookFormData, setBookFormData] = useState({
@@ -350,6 +392,120 @@ const AdminDashboard = ({ admin, onLogout }) => {
     }
   };
 
+  const handleUpdateRole = async () => {
+    if (!editingUserRole || !selectedRole) return;
+
+    const token = localStorage.getItem('adminToken');
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/users/${editingUserRole.id}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: selectedRole })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update role');
+      }
+
+      await fetchUsers();
+      setEditingUserRole(null);
+      setSelectedRole('');
+      alert('User role updated successfully');
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      alert(error.message || 'Failed to update user role');
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserFormData({
+      username: user.username,
+      email: user.email,
+      full_name: user.full_name || ''
+    });
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    const token = localStorage.getItem('adminToken');
+
+    try {
+      // Only include password in update if it's been filled in
+      const updateData = { ...userFormData };
+      if (!updateData.password || updateData.password.trim() === '') {
+        delete updateData.password;
+      }
+
+      const response = await fetch(`http://localhost:3001/api/admin/users/${editingUser.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update user');
+      }
+
+      await fetchUsers();
+      setEditingUser(null);
+      setUserFormData({ username: '', email: '', full_name: '', password: '' });
+      alert('User updated successfully');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert(error.message || 'Failed to update user');
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem('adminToken');
+
+    try {
+      const response = await fetch('http://localhost:3001/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUserFormData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
+
+      await fetchUsers();
+      setShowAddUserForm(false);
+      setNewUserFormData({
+        username: '',
+        email: '',
+        password: '',
+        full_name: '',
+        role: 'user'
+      });
+      alert('User created successfully');
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert(error.message || 'Failed to create user');
+    }
+  };
+
   const handleEdit = (character) => {
     setEditingCharacter(character);
     setFormData({
@@ -538,23 +694,23 @@ const AdminDashboard = ({ admin, onLogout }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50" style={{ fontFamily: 'Roboto, sans-serif' }}>
       {/* Header */}
-      <div className="bg-black text-white border-b-4 border-black">
+      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white border-b border-purple-400/30 shadow-xl">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-black uppercase">Admin Dashboard</h1>
-              <p className="text-gray-300 font-medium mt-1">Manage Literary Chat Platform</p>
+              <h1 className="text-3xl font-bold drop-shadow-lg">Admin Dashboard</h1>
+              <p className="text-purple-100 font-medium mt-1">Manage Literary Chat Platform</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/10 px-4 py-2">
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/40 shadow-lg">
                 <Shield className="w-5 h-5" />
-                <span className="font-bold">{admin?.username}</span>
+                <span className="font-semibold">{admin?.username}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="bg-white text-black font-bold py-2 px-4 uppercase text-sm flex items-center gap-2 hover:bg-gray-200 transition-colors border-2 border-white"
+                className="bg-white/20 backdrop-blur-sm text-white font-semibold py-2.5 px-4 text-sm flex items-center gap-2 hover:bg-white/30 transition-all rounded-xl border border-white/40 shadow-lg"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
@@ -566,43 +722,43 @@ const AdminDashboard = ({ admin, onLogout }) => {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('books')}
-              className={`flex items-center gap-2 px-6 py-3 font-bold uppercase text-sm border-2 border-white transition-colors ${
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all rounded-lg ${
                 activeTab === 'books'
-                  ? 'bg-white text-black'
-                  : 'bg-transparent text-white hover:bg-white/10'
+                  ? 'bg-white text-gray-900 shadow-lg'
+                  : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
               }`}
             >
               <Library className="w-4 h-4" />
               Books
-              <span className="bg-black text-white px-2 py-0.5 rounded text-xs">
+              <span className={`${activeTab === 'books' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-700'} text-white px-2 py-0.5 rounded-full text-xs font-semibold`}>
                 {books.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab('characters')}
-              className={`flex items-center gap-2 px-6 py-3 font-bold uppercase text-sm border-2 border-white transition-colors ${
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all rounded-lg ${
                 activeTab === 'characters'
-                  ? 'bg-white text-black'
-                  : 'bg-transparent text-white hover:bg-white/10'
+                  ? 'bg-white text-gray-900 shadow-lg'
+                  : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
               }`}
             >
               <BookOpen className="w-4 h-4" />
               Characters
-              <span className="bg-black text-white px-2 py-0.5 rounded text-xs">
+              <span className={`${activeTab === 'characters' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-700'} text-white px-2 py-0.5 rounded-full text-xs font-semibold`}>
                 {characters.length}
               </span>
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2 px-6 py-3 font-bold uppercase text-sm border-2 border-white transition-colors ${
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all rounded-lg ${
                 activeTab === 'users'
-                  ? 'bg-white text-black'
-                  : 'bg-transparent text-white hover:bg-white/10'
+                  ? 'bg-white text-gray-900 shadow-lg'
+                  : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
               }`}
             >
               <Users className="w-4 h-4" />
               Users
-              <span className="bg-black text-white px-2 py-0.5 rounded text-xs">
+              <span className={`${activeTab === 'users' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-700'} text-white px-2 py-0.5 rounded-full text-xs font-semibold`}>
                 {users.length}
               </span>
             </button>
@@ -614,80 +770,373 @@ const AdminDashboard = ({ admin, onLogout }) => {
         {/* Books Tab */}
         {activeTab === 'books' && (
           <>
-            {/* Add Book Button */}
-            <button
-              onClick={() => setShowBookForm(true)}
-              className="mb-8 bg-black text-white font-bold py-3 px-6 uppercase flex items-center gap-2 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <Plus className="w-5 h-5" />
-              Add New Book
-            </button>
+            {/* Filters and Search */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by title or author..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1); // Reset to first page on search
+                    }}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                  />
+                </div>
+
+                {/* Genre Filter */}
+                <select
+                  value={genreFilter}
+                  onChange={(e) => {
+                    setGenreFilter(e.target.value);
+                    setCurrentPage(1); // Reset to first page on filter
+                  }}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow min-w-[200px]"
+                >
+                  <option value="all">All Genres</option>
+                  {Array.from(new Set(books.filter(b => b.genre).map(b => b.genre))).sort().map(genre => (
+                    <option key={genre} value={genre}>{genre}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Add Book Button */}
+              <button
+                onClick={() => setShowBookForm(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 flex items-center gap-2 hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl rounded-lg whitespace-nowrap"
+              >
+                <Plus className="w-5 h-5" />
+                Add New Book
+              </button>
+            </div>
+
+            {/* Filtering and Pagination Logic */}
+            {(() => {
+              // Filter books
+              const filteredBooks = books.filter(book => {
+                const matchesSearch = searchQuery === '' || 
+                  book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  book.author.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesGenre = genreFilter === 'all' || book.genre === genreFilter;
+                return matchesSearch && matchesGenre;
+              });
+
+              // Pagination
+              const indexOfLastBook = currentPage * booksPerPage;
+              const indexOfFirstBook = indexOfLastBook - booksPerPage;
+              const currentBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
+              const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+
+              return (
+                <>
+                  {/* Books List */}
+                  <div className="bg-white rounded-2xl border-2 border-purple-100 shadow-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-violet-600 text-white p-6">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold drop-shadow-md">All Books ({filteredBooks.length})</h2>
+                        {searchQuery || genreFilter !== 'all' ? (
+                          <button
+                            onClick={() => {
+                              setSearchQuery('');
+                              setGenreFilter('all');
+                              setCurrentPage(1);
+                            }}
+                            className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors shadow-lg"
+                          >
+                            Clear Filters
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="p-12 text-center">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                        <p className="text-xl font-semibold mt-4 text-gray-600">Loading books...</p>
+                      </div>
+                    ) : filteredBooks.length === 0 ? (
+                      <div className="p-12 text-center">
+                        <BookOpen className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <p className="text-xl font-semibold text-gray-500">
+                          {searchQuery || genreFilter !== 'all' ? 'No books match your filters' : 'No books found'}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-2">
+                          {searchQuery || genreFilter !== 'all' 
+                            ? 'Try adjusting your search or filters' 
+                            : 'Click "Add New Book" to get started'}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="divide-y divide-gray-200">
+                          {currentBooks.map((book) => {
+                            const isExpanded = expandedBooks.has(book.id);
+                            const hasCharacters = book.characters && book.characters.length > 0;
+                            
+                            return (
+                              <div key={book.id} className="bg-white hover:bg-gray-50 transition-colors">
+                                {/* Book Header - Clickable */}
+                                <div 
+                                  className={`p-6 ${hasCharacters ? 'cursor-pointer' : ''}`}
+                                  onClick={() => hasCharacters && toggleBookExpansion(book.id)}
+                                >
+                                  <div className="flex items-start justify-between gap-6">
+                                    {/* Book Cover Image */}
+                                    <div className="flex-shrink-0">
+                                      <img 
+                                        src={book.cover_image || '/book.svg'} 
+                                        alt={book.title}
+                                        className="w-28 h-40 object-cover rounded-lg shadow-lg border-2 border-gray-200"
+                                      />
+                                    </div>
+
+                                    {/* Book Info */}
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-3 mb-2">
+                                        {hasCharacters && (
+                                          <div className="flex-shrink-0 p-1 rounded-full hover:bg-gray-200 transition-colors">
+                                            {isExpanded ? (
+                                              <ChevronDown className="w-5 h-5 text-blue-600" />
+                                            ) : (
+                                              <ChevronRight className="w-5 h-5 text-gray-400" />
+                                            )}
+                                          </div>
+                                        )}
+                                        <h3 className="text-xl font-bold text-gray-900">{book.title}</h3>
+                                      </div>
+                                      <p className="text-sm font-semibold text-gray-600 mb-3">by {book.author}</p>
+                                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                        {book.genre && (
+                                          <span className="inline-flex items-center gap-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-1 text-xs font-semibold rounded-full shadow-sm">
+                                            <Library className="w-3 h-3" />
+                                            {book.genre}
+                                          </span>
+                                        )}
+                                        <span className="inline-flex items-center gap-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 text-xs font-semibold rounded-full shadow-sm">
+                                          <Users className="w-3 h-3" />
+                                          {book.characters?.length || 0} CHARACTER{(book.characters?.length || 0) !== 1 ? 'S' : ''}
+                                        </span>
+                                        {book.published_year && (
+                                          <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 text-xs font-semibold rounded-full shadow-sm">
+                                            📅 {book.published_year}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {book.description && (
+                                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">{book.description}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditBook(book);
+                                        }}
+                                        className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 rounded-lg hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all"
+                                        title="Edit Book"
+                                      >
+                                        <Edit className="w-5 h-5" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteBook(book.id);
+                                        }}
+                                        className="bg-gradient-to-r from-red-600 to-red-700 text-white p-3 rounded-lg hover:from-red-700 hover:to-red-800 shadow-lg hover:shadow-xl transition-all"
+                                        title="Delete Book"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Characters List - Expandable */}
+                                {isExpanded && hasCharacters && (
+                                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-t-2 border-blue-200">
+                                    <div className="p-6">
+                                      <h4 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-800">
+                                        <BookOpen className="w-5 h-5 text-blue-600" />
+                                        Characters in this Book
+                                      </h4>
+                                      <div className="grid md:grid-cols-2 gap-4">
+                                        {book.characters.map((character) => (
+                                          <div 
+                                            key={character.id} 
+                                            onClick={() => handleViewCharacter(character)}
+                                            className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group"
+                                          >
+                                            <div className="flex gap-3">
+                                              <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 shadow-md border-2 border-gray-200 group-hover:border-blue-400 transition-all">
+                                                <img 
+                                                  src={character.image || '/book.svg'} 
+                                                  alt={character.name}
+                                                  className="w-full h-full object-cover"
+                                                />
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <h5 className="font-bold text-sm mb-1 truncate text-gray-900">{character.name}</h5>
+                                                <p className="text-xs text-gray-600 line-clamp-2">{character.personality}</p>
+                                                <div className="flex gap-2 mt-3">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleEdit(character);
+                                                    }}
+                                                    className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 py-1.5 text-xs font-semibold rounded-lg hover:from-green-700 hover:to-green-800 shadow-md hover:shadow-lg transition-all"
+                                                  >
+                                                    Edit
+                                                  </button>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleDelete(character.id);
+                                                    }}
+                                                    className="bg-gradient-to-r from-red-600 to-red-700 text-white px-3 py-1.5 text-xs font-semibold rounded-lg hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all"
+                                                  >
+                                                    Delete
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-gray-600">
+                                Showing {indexOfFirstBook + 1} to {Math.min(indexOfLastBook, filteredBooks.length)} of {filteredBooks.length} books
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                  disabled={currentPage === 1}
+                                  className={`px-3 py-2 rounded-lg font-semibold transition-all ${
+                                    currentPage === 1
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                  }`}
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                  <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                      currentPage === page
+                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                    }`}
+                                  >
+                                    {page}
+                                  </button>
+                                ))}
+                                
+                                <button
+                                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                  disabled={currentPage === totalPages}
+                                  className={`px-3 py-2 rounded-lg font-semibold transition-all ${
+                                    currentPage === totalPages
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                  }`}
+                                >
+                                  <ChevronRightIcon className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Book Form Modal */}
             {showBookForm && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="sticky top-0 bg-white border-b-4 border-black p-6 flex justify-between items-center">
-                    <h2 className="text-2xl font-black uppercase">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
+                    <h2 className="text-2xl font-bold">
                       {editingBook ? 'Edit Book' : 'Add New Book'}
                     </h2>
                     <button
                       onClick={resetBookForm}
-                      className="text-gray-500 hover:text-black transition-colors"
+                      className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
                     >
                       <X className="w-6 h-6" />
                     </button>
                   </div>
                 
-                  <form onSubmit={handleBookSubmit} className="p-6 space-y-6">
+                  <form onSubmit={handleBookSubmit} className="p-6 space-y-6 overflow-y-auto">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-bold uppercase mb-2">Book Title *</label>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700">Book Title *</label>
                       <input
                         type="text"
                         value={bookFormData.title}
                         onChange={(e) => setBookFormData({ ...bookFormData, title: e.target.value })}
-                        className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                         required
+                        placeholder="Enter book title"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold uppercase mb-2">Author *</label>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700">Author *</label>
                       <input
                         type="text"
                         value={bookFormData.author}
                         onChange={(e) => setBookFormData({ ...bookFormData, author: e.target.value })}
-                        className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                         required
+                        placeholder="Enter author name"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold uppercase mb-2">Genre</label>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700">Genre</label>
                       <input
                         type="text"
                         value={bookFormData.genre}
                         onChange={(e) => setBookFormData({ ...bookFormData, genre: e.target.value })}
-                        className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                         placeholder="e.g., Classic Literature, Mystery"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold uppercase mb-2">Published Year</label>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700">Published Year</label>
                       <input
                         type="number"
                         value={bookFormData.published_year}
                         onChange={(e) => setBookFormData({ ...bookFormData, published_year: e.target.value })}
-                        className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                         placeholder="e.g., 1925"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Book Cover Image</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Book Cover Image</label>
                     <div className="space-y-3">
                       {/* Image Preview */}
                       {bookImagePreview && (
@@ -695,12 +1144,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
                           <img 
                             src={bookImagePreview} 
                             alt="Cover Preview" 
-                            className="w-48 h-64 object-cover border-2 border-black"
+                            className="w-48 h-64 object-cover border-2 border-gray-200 rounded-lg shadow-lg"
                           />
                           <button
                             type="button"
                             onClick={removeBookImage}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 border-2 border-black hover:bg-red-600"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -718,42 +1167,42 @@ const AdminDashboard = ({ admin, onLogout }) => {
                         />
                         <label
                           htmlFor="book-image-upload"
-                          className="flex items-center gap-2 px-4 py-3 border-2 border-black font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
                         >
-                          <Upload className="w-5 h-5" />
-                          <span>{bookImagePreview ? 'Change Cover Image' : 'Upload Cover Image'}</span>
+                          <Upload className="w-5 h-5 text-blue-600" />
+                          <span className="text-gray-700">{bookImagePreview ? 'Change Cover Image' : 'Upload Cover Image'}</span>
                         </label>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-500">
                         Supported formats: JPEG, PNG, GIF, WebP, SVG (Max 5MB)
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Book PDF File</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Book PDF File</label>
                     <div className="space-y-3">
                       {/* PDF File Name Display / Download Link */}
                       {(bookPdfFileName || bookFormData.pdf_file) && (
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 border-2 border-black">
-                          <BookOpen className="w-6 h-6 text-red-600 flex-shrink-0" />
+                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg">
+                          <BookOpen className="w-6 h-6 text-blue-600 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate">{bookPdfFileName || 'Current PDF'}</p>
+                            <p className="font-bold text-sm truncate text-gray-800">{bookPdfFileName || 'Current PDF'}</p>
                             {bookFormData.pdf_file && !bookPdfFile && (
                               <a 
                                 href={`http://localhost:3001${bookFormData.pdf_file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:underline"
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-semibold"
                               >
-                                View PDF
+                                View PDF →
                               </a>
                             )}
                           </div>
                           <button
                             type="button"
                             onClick={removeBookPdf}
-                            className="bg-red-500 text-white rounded-full p-1 border-2 border-black hover:bg-red-600 flex-shrink-0"
+                            className="bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 flex-shrink-0 transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -771,39 +1220,39 @@ const AdminDashboard = ({ admin, onLogout }) => {
                         />
                         <label
                           htmlFor="book-pdf-upload"
-                          className="flex items-center gap-2 px-4 py-3 border-2 border-black font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
                         >
-                          <Upload className="w-5 h-5" />
-                          <span>{bookPdfFileName ? 'Change PDF File' : 'Upload PDF File'}</span>
+                          <Upload className="w-5 h-5 text-purple-600" />
+                          <span className="text-gray-700">{bookPdfFileName ? 'Change PDF File' : 'Upload PDF File'}</span>
                         </label>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-500">
                         Supported format: PDF (Max 100MB)
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Description</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Description</label>
                     <textarea
                       value={bookFormData.description}
                       onChange={(e) => setBookFormData({ ...bookFormData, description: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4 h-24"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow h-32 resize-none"
                       placeholder="Brief description of the book..."
                     />
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 pt-4 border-t border-gray-200">
                     <button
                       type="submit"
-                      className="bg-black text-white font-bold py-3 px-8 uppercase border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-8 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
                     >
                       {editingBook ? 'Update Book' : 'Create Book'}
                     </button>
                     <button
                       type="button"
                       onClick={resetBookForm}
-                      className="bg-white text-black font-bold py-3 px-8 uppercase border-2 border-black hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
                     >
                       Cancel
                     </button>
@@ -813,223 +1262,68 @@ const AdminDashboard = ({ admin, onLogout }) => {
             </div>
             )}
 
-            {/* Books List */}
-            <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-              <div className="border-b-4 border-black p-6">
-                <h2 className="text-2xl font-black uppercase">All Books ({books.length})</h2>
-              </div>
-
-              {isLoading ? (
-                <div className="p-12 text-center">
-                  <p className="text-xl font-bold">Loading books...</p>
-                </div>
-              ) : books.length === 0 ? (
-                <div className="p-12 text-center">
-                  <p className="text-xl font-bold">No books found</p>
-                </div>
-              ) : (
-                <div className="divide-y-4 divide-black">
-                  {books.map((book) => {
-                    const isExpanded = expandedBooks.has(book.id);
-                    const hasCharacters = book.characters && book.characters.length > 0;
-                    
-                    return (
-                      <div key={book.id} className="bg-white">
-                        {/* Book Header - Clickable */}
-                        <div 
-                          className={`p-6 transition-colors ${hasCharacters ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                          onClick={() => hasCharacters && toggleBookExpansion(book.id)}
-                        >
-                          <div className="flex items-start justify-between gap-6">
-                            {/* Book Cover Image */}
-                            <div className="flex-shrink-0">
-                              <img 
-                                src={book.cover_image || '/book.svg'} 
-                                alt={book.title}
-                                className="w-24 h-32 object-cover border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                              />
-                            </div>
-
-                            {/* Book Info */}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                {hasCharacters && (
-                                  <div className="flex-shrink-0">
-                                    {isExpanded ? (
-                                      <ChevronDown className="w-6 h-6 text-gray-600" />
-                                    ) : (
-                                      <ChevronRight className="w-6 h-6 text-gray-600" />
-                                    )}
-                                  </div>
-                                )}
-                                <h3 className="text-xl font-black uppercase">{book.title}</h3>
-                              </div>
-                              <p className="text-sm font-bold text-gray-600 mb-2">by {book.author}</p>
-                              <div className="flex items-center gap-2 mb-2">
-                                {book.genre && (
-                                  <span className="inline-block bg-black text-white px-3 py-1 text-xs font-bold uppercase">
-                                    {book.genre}
-                                  </span>
-                                )}
-                                <span className="inline-block bg-blue-600 text-white px-3 py-1 text-xs font-bold uppercase">
-                                  {book.characters?.length || 0} CHARACTER{(book.characters?.length || 0) !== 1 ? 'S' : ''}
-                                </span>
-                              </div>
-                              {book.description && (
-                                <p className="text-sm text-gray-700 mt-2">{book.description}</p>
-                              )}
-                              {book.published_year && (
-                                <p className="text-xs text-gray-500 mt-2">Published: {book.published_year}</p>
-                              )}
-                            </div>
-                            <div className="flex gap-2 flex-shrink-0">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditBook(book);
-                                }}
-                                className="bg-blue-500 text-white p-3 border-2 border-black hover:bg-blue-600 transition-colors"
-                                title="Edit Book"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteBook(book.id);
-                                }}
-                                className="bg-red-500 text-white p-3 border-2 border-black hover:bg-red-600 transition-colors"
-                                title="Delete Book"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Characters List - Expandable */}
-                        {isExpanded && hasCharacters && (
-                          <div className="border-t-4 border-black bg-gray-50">
-                            <div className="p-6">
-                              <h4 className="text-lg font-black uppercase mb-4 flex items-center gap-2">
-                                <BookOpen className="w-5 h-5" />
-                                Characters in this Book
-                              </h4>
-                              <div className="grid md:grid-cols-2 gap-4">
-                                {book.characters.map((character) => (
-                                  <div 
-                                    key={character.id} 
-                                    onClick={() => handleViewCharacter(character)}
-                                    className="bg-white border-2 border-black p-4 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow cursor-pointer"
-                                  >
-                                    <div className="flex gap-3">
-                                      <div className={`w-12 h-12 bg-gradient-to-br ${character.color} border-2 border-black flex items-center justify-center flex-shrink-0 overflow-hidden`}>
-                                        <img 
-                                          src={character.image || '/book.svg'} 
-                                          alt={character.name}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <h5 className="font-black uppercase text-sm mb-1 truncate">{character.name}</h5>
-                                        <p className="text-xs text-gray-600 line-clamp-2">{character.personality}</p>
-                                        <div className="flex gap-2 mt-2">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleEdit(character);
-                                            }}
-                                            className="bg-blue-500 text-white px-2 py-1 text-xs font-bold uppercase border border-black hover:bg-blue-600"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDelete(character.id);
-                                            }}
-                                            className="bg-red-500 text-white px-2 py-1 text-xs font-bold uppercase border border-black hover:bg-red-600"
-                                          >
-                                            Delete
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
             {/* Character Detail View Modal */}
             {selectedCharacter && !showCharacterForm && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-8">
-                    <div className="flex justify-between items-start mb-6">
-                      <h2 className="text-2xl font-black uppercase">Character Details</h2>
-                      <button
-                        onClick={() => setSelectedCharacter(null)}
-                        className="text-2xl font-bold hover:bg-gray-200 w-8 h-8 flex items-center justify-center border-2 border-black"
-                      >
-                        ×
-                      </button>
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 flex justify-between items-center">
+                    <h2 className="text-2xl font-bold">Character Details</h2>
+                    <button
+                      onClick={() => setSelectedCharacter(null)}
+                      className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  <div className="p-8 space-y-6 overflow-y-auto">
+                    <div className="flex items-center gap-4 pb-6 border-b border-gray-200">
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg border-2 border-gray-200">
+                        <img 
+                          src={selectedCharacter.image || '/book.svg'} 
+                          alt={selectedCharacter.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">{selectedCharacter.name}</h3>
+                        <p className="text-gray-600 font-semibold mt-1">{selectedCharacter.book_title} by {selectedCharacter.book_author}</p>
+                      </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-20 h-20 bg-gradient-to-br ${selectedCharacter.color} border-2 border-black flex items-center justify-center overflow-hidden`}>
-                          <img 
-                            src={selectedCharacter.image || '/book.svg'} 
-                            alt={selectedCharacter.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-black uppercase">{selectedCharacter.name}</h3>
-                          <p className="text-gray-600">{selectedCharacter.book_title} by {selectedCharacter.book_author}</p>
-                        </div>
-                      </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Personality</label>
+                      <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedCharacter.personality}</p>
+                    </div>
 
+                    <div>
+                      <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Greeting</label>
+                      <p className="text-gray-700 leading-relaxed italic bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-l-4 border-purple-500">"{selectedCharacter.greeting}"</p>
+                    </div>
+
+                    {selectedCharacter.description && (
                       <div>
-                        <label className="block text-sm font-bold uppercase mb-2">Personality</label>
-                        <p className="text-gray-700 leading-relaxed">{selectedCharacter.personality}</p>
+                        <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Description</label>
+                        <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedCharacter.description}</p>
                       </div>
+                    )}
 
-                      <div>
-                        <label className="block text-sm font-bold uppercase mb-2">Greeting</label>
-                        <p className="text-gray-700 leading-relaxed italic">"{selectedCharacter.greeting}"</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold uppercase mb-2">Description</label>
-                        <p className="text-gray-700 leading-relaxed">{selectedCharacter.description}</p>
-                      </div>
-
-                      <div className="flex gap-4 pt-4 border-t-2 border-black">
-                        <button
-                          onClick={() => {
-                            handleEdit(selectedCharacter);
-                            setSelectedCharacter(null);
-                          }}
-                          className="flex-1 bg-blue-500 text-white font-bold py-3 px-6 uppercase border-2 border-black hover:bg-blue-600 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                        >
-                          Edit Character
-                        </button>
-                        <button
-                          onClick={() => setSelectedCharacter(null)}
-                          className="flex-1 bg-gray-200 text-black font-bold py-3 px-6 uppercase border-2 border-black hover:bg-gray-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                        >
-                          Close
-                        </button>
-                      </div>
+                    <div className="flex gap-4 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => {
+                          handleEdit(selectedCharacter);
+                          setSelectedCharacter(null);
+                        }}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all"
+                      >
+                        Edit Character
+                      </button>
+                      <button
+                        onClick={() => setSelectedCharacter(null)}
+                        className="flex-1 bg-white text-gray-700 font-semibold py-3 px-6 border-2 border-gray-300 rounded-lg hover:bg-gray-50 shadow-lg transition-colors"
+                      >
+                        Close
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1041,148 +1335,449 @@ const AdminDashboard = ({ admin, onLogout }) => {
         {/* Characters Tab */}
         {activeTab === 'characters' && (
           <>
-            {/* Add Character Button */}
-            <button
-              onClick={() => setShowCharacterForm(true)}
-              className="mb-8 bg-black text-white font-bold py-3 px-6 uppercase flex items-center gap-2 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <Plus className="w-5 h-5" />
-              Add New Character
-            </button>
-
-        {/* Characters List */}
-        <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <div className="border-b-4 border-black p-6">
-            <h2 className="text-2xl font-black uppercase">All Characters ({characters.length})</h2>
-          </div>
-
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <p className="text-xl font-bold">Loading characters...</p>
-            </div>
-          ) : characters.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-xl font-bold">No characters found</p>
-            </div>
-          ) : (
-            <div className="divide-y-2 divide-black">
-              {characters.map((character) => (
-                <div key={character.id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex gap-4 flex-1">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${character.color} border-2 border-black flex items-center justify-center flex-shrink-0 overflow-hidden`}>
-                        <img 
-                          src={character.image || '/book.svg'} 
-                          alt={character.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-black uppercase mb-1">{character.name}</h3>
-                        <p className="text-sm font-bold text-gray-600 mb-1">{character.book_title}</p>
-                        <p className="text-xs text-gray-500">by {character.book_author}</p>
-                        <p className="mt-3 text-sm text-gray-700 line-clamp-2">{character.greeting}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEdit(character)}
-                        className="bg-blue-500 text-white p-3 border-2 border-black hover:bg-blue-600 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(character.id)}
-                        className="bg-red-500 text-white p-3 border-2 border-black hover:bg-red-600 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
+            {/* Filters and Search */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by character or book..."
+                    value={characterSearchQuery}
+                    onChange={(e) => {
+                      setCharacterSearchQuery(e.target.value);
+                      setCharacterCurrentPage(1);
+                    }}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
+                  />
                 </div>
-              ))}
+
+                {/* Book Filter */}
+                <select
+                  value={characterBookFilter}
+                  onChange={(e) => {
+                    setCharacterBookFilter(e.target.value);
+                    setCharacterCurrentPage(1);
+                  }}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow min-w-[200px]"
+                >
+                  <option value="all">All Books</option>
+                  {books.map(book => (
+                    <option key={book.id} value={book.id}>{book.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Add Character Button */}
+              <button
+                onClick={() => setShowCharacterForm(true)}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-6 flex items-center gap-2 hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl rounded-lg whitespace-nowrap"
+              >
+                <Plus className="w-5 h-5" />
+                Add New Character
+              </button>
             </div>
-          )}
-        </div>
-        </>
+
+            {/* Filtering and Pagination Logic */}
+            {(() => {
+              // Filter characters
+              const filteredCharacters = characters.filter(character => {
+                const matchesSearch = characterSearchQuery === '' || 
+                  character.name.toLowerCase().includes(characterSearchQuery.toLowerCase()) ||
+                  character.book_title.toLowerCase().includes(characterSearchQuery.toLowerCase());
+                const matchesBook = characterBookFilter === 'all' || character.book_id === parseInt(characterBookFilter);
+                return matchesSearch && matchesBook;
+              });
+
+              // Pagination
+              const indexOfLastCharacter = characterCurrentPage * charactersPerPage;
+              const indexOfFirstCharacter = indexOfLastCharacter - charactersPerPage;
+              const currentCharacters = filteredCharacters.slice(indexOfFirstCharacter, indexOfLastCharacter);
+              const totalPages = Math.ceil(filteredCharacters.length / charactersPerPage);
+
+              return (
+                <>
+                  {/* Characters List */}
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold">All Characters ({filteredCharacters.length})</h2>
+                        {characterSearchQuery || characterBookFilter !== 'all' ? (
+                          <button
+                            onClick={() => {
+                              setCharacterSearchQuery('');
+                              setCharacterBookFilter('all');
+                              setCharacterCurrentPage(1);
+                            }}
+                            className="text-sm bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            Clear Filters
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="p-12 text-center">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+                        <p className="text-xl font-semibold mt-4 text-gray-600">Loading characters...</p>
+                      </div>
+                    ) : filteredCharacters.length === 0 ? (
+                      <div className="p-12 text-center">
+                        <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <p className="text-xl font-semibold text-gray-500">
+                          {characterSearchQuery || characterBookFilter !== 'all' ? 'No characters match your filters' : 'No characters found'}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-2">
+                          {characterSearchQuery || characterBookFilter !== 'all' 
+                            ? 'Try adjusting your search or filters' 
+                            : 'Click "Add New Character" to get started'}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid md:grid-cols-2 gap-4 p-6">
+                          {currentCharacters.map((character) => (
+                            <div key={character.id} className="bg-white border-2 border-gray-200 rounded-xl p-5 hover:shadow-xl hover:border-purple-300 transition-all">
+                              <div className="flex items-start gap-4">
+                                <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 shadow-md border-2 border-gray-200">
+                                  <img 
+                                    src={character.image || '/book.svg'} 
+                                    alt={character.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-lg font-bold mb-1 text-gray-900">{character.name}</h3>
+                                  <p className="text-sm font-semibold text-purple-600 mb-1">{character.book_title}</p>
+                                  <p className="text-xs text-gray-500 mb-2">by {character.book_author}</p>
+                                  <p className="text-sm text-gray-600 line-clamp-2 italic">"{character.greeting}"</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+                                <button
+                                  onClick={() => handleEdit(character)}
+                                  className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg font-semibold text-sm"
+                                  title="Edit"
+                                >
+                                  <Edit className="w-4 h-4 inline mr-1" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(character.id)}
+                                  className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-2 px-4 rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-semibold text-sm"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4 inline mr-1" />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-gray-600">
+                                Showing {indexOfFirstCharacter + 1} to {Math.min(indexOfLastCharacter, filteredCharacters.length)} of {filteredCharacters.length} characters
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setCharacterCurrentPage(prev => Math.max(prev - 1, 1))}
+                                  disabled={characterCurrentPage === 1}
+                                  className={`px-3 py-2 rounded-lg font-semibold transition-all ${
+                                    characterCurrentPage === 1
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                  }`}
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                  <button
+                                    key={page}
+                                    onClick={() => setCharacterCurrentPage(page)}
+                                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                                      characterCurrentPage === page
+                                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                    }`}
+                                  >
+                                    {page}
+                                  </button>
+                                ))}
+                                
+                                <button
+                                  onClick={() => setCharacterCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                  disabled={characterCurrentPage === totalPages}
+                                  className={`px-3 py-2 rounded-lg font-semibold transition-all ${
+                                    characterCurrentPage === totalPages
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm'
+                                  }`}
+                                >
+                                  <ChevronRightIcon className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </>
         )}
 
         {/* Users Tab */}
         {activeTab === 'users' && (
           <div>
             <div className="mb-6">
-              <h2 className="text-2xl font-black uppercase mb-2">Registered Users</h2>
+              <h2 className="text-2xl font-bold mb-2">Registered Users</h2>
               <p className="text-gray-600 font-medium">Manage user accounts and view activity</p>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4">
+              {/* Search Bar */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search by username or email..."
+                  value={userSearchQuery}
+                  onChange={(e) => {
+                    setUserSearchQuery(e.target.value);
+                    setUserCurrentPage(1);
+                  }}
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div className="relative">
+                <select
+                  value={userRoleFilter}
+                  onChange={(e) => {
+                    setUserRoleFilter(e.target.value);
+                    setUserCurrentPage(1);
+                  }}
+                  className="w-full md:w-48 px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all appearance-none bg-white font-medium cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="user">👤 User</option>
+                  <option value="moderator">⚡ Moderator</option>
+                  <option value="admin">🛡️ Admin</option>
+                </select>
+              </div>
+
+              {/* Add User Button */}
+              <button
+                onClick={() => setShowAddUserForm(true)}
+                className="px-6 py-2.5 bg-gradient-to-r from-teal-600 to-green-600 text-white font-bold rounded-lg hover:from-teal-700 hover:to-green-700 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add User
+              </button>
+
+              {/* Clear Filters Button */}
+              {(userSearchQuery || userRoleFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setUserSearchQuery('');
+                    setUserRoleFilter('all');
+                    setUserCurrentPage(1);
+                  }}
+                  className="px-4 py-2.5 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
 
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">⏳</div>
-                <p className="text-xl font-black uppercase">Loading users...</p>
+                <p className="text-xl font-bold">Loading users...</p>
               </div>
             ) : users.length === 0 ? (
-              <div className="bg-white border-4 border-black p-12 text-center">
+              <div className="bg-white border-2 border-gray-200 rounded-xl p-12 text-center">
                 <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-2xl font-black uppercase mb-2">No Users Yet</h3>
+                <h3 className="text-2xl font-bold mb-2">No Users Yet</h3>
                 <p className="text-gray-600 font-medium">Users will appear here once they register</p>
               </div>
             ) : (
-              <div className="bg-white border-4 border-black">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-black text-white">
-                      <tr>
-                        <th className="text-left p-4 font-black uppercase text-sm">ID</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Username</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Email</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Full Name</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Conversations</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Joined</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Last Login</th>
-                        <th className="text-left p-4 font-black uppercase text-sm">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y-2 divide-black">
-                      {users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="p-4 font-bold">{user.id}</td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="w-4 h-4 text-gray-400" />
-                              <span className="font-bold">{user.username}</span>
+              (() => {
+                // Filter users based on search query and role
+                const filteredUsers = users.filter(user => {
+                  const matchesSearch = userSearchQuery === '' || 
+                    user.username.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                    user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                    (user.full_name && user.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()));
+                  
+                  const matchesRole = userRoleFilter === 'all' || user.role === userRoleFilter;
+                  
+                  return matchesSearch && matchesRole;
+                });
+
+                // Pagination logic
+                const indexOfLastUser = userCurrentPage * usersPerPage;
+                const indexOfFirstUser = indexOfLastUser - usersPerPage;
+                const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+                const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+                return (
+                  <>
+                    {currentUsers.length === 0 ? (
+                      <div className="bg-white border-2 border-gray-200 rounded-xl p-12 text-center">
+                        <Users className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                        <h3 className="text-2xl font-bold mb-2">No Users Found</h3>
+                        <p className="text-gray-600 font-medium">Try adjusting your search criteria</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-gradient-to-r from-teal-600 to-green-600 text-white">
+                                <tr>
+                                  <th className="text-left p-4 font-bold text-sm">ID</th>
+                                  <th className="text-left p-4 font-bold text-sm">Username</th>
+                                  <th className="text-left p-4 font-bold text-sm">Email</th>
+                                  <th className="text-left p-4 font-bold text-sm">Full Name</th>
+                                  <th className="text-left p-4 font-bold text-sm">Role</th>
+                                  <th className="text-left p-4 font-bold text-sm">Conversations</th>
+                                  <th className="text-left p-4 font-bold text-sm">Joined</th>
+                                  <th className="text-left p-4 font-bold text-sm">Last Login</th>
+                                  <th className="text-left p-4 font-bold text-sm">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {currentUsers.map((user) => (
+                                  <tr key={user.id} className="hover:bg-teal-50 transition-colors">
+                                    <td className="p-4 font-bold text-gray-700">{user.id}</td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-600 to-green-600 flex items-center justify-center">
+                                          <UserIcon className="w-4 h-4 text-white" />
+                                        </div>
+                                        <span className="font-bold text-gray-800">{user.username}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-4 font-medium text-gray-600">{user.email}</td>
+                                    <td className="p-4 font-medium text-gray-700">{user.full_name || '-'}</td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                          user.role === 'admin' 
+                                            ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' 
+                                            : user.role === 'moderator'
+                                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
+                                            : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                                        }`}>
+                                          {user.role?.toUpperCase() || 'USER'}
+                                        </span>
+                                        <button
+                                          onClick={() => {
+                                            setEditingUserRole(user);
+                                            setSelectedRole(user.role || 'user');
+                                          }}
+                                          className="text-teal-600 hover:text-teal-800 transition-colors"
+                                          title="Edit Role"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        <MessageSquare className="w-4 h-4 text-teal-600" />
+                                        <span className="font-bold text-gray-800">{user.conversation_count || 0}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-600">
+                                      {new Date(user.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-600">
+                                      {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                                    </td>
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleEditUser(user)}
+                                          className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white p-2 rounded-lg hover:shadow-lg transition-all"
+                                          title="Edit User"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteUser(user.id)}
+                                          className="bg-gradient-to-r from-red-500 to-red-600 text-white p-2 rounded-lg hover:shadow-lg transition-all"
+                                          title="Delete User"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="text-sm text-gray-600 font-medium">
+                              Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
                             </div>
-                          </td>
-                          <td className="p-4 font-medium text-gray-600">{user.email}</td>
-                          <td className="p-4 font-medium">{user.full_name || '-'}</td>
-                          <td className="p-4">
                             <div className="flex items-center gap-2">
-                              <MessageSquare className="w-4 h-4 text-gray-400" />
-                              <span className="font-bold">{user.conversation_count || 0}</span>
+                              <button
+                                onClick={() => setUserCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={userCurrentPage === 1}
+                                className="px-3 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
+                              
+                              <div className="flex gap-2">
+                                {[...Array(totalPages)].map((_, index) => (
+                                  <button
+                                    key={index + 1}
+                                    onClick={() => setUserCurrentPage(index + 1)}
+                                    className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                                      userCurrentPage === index + 1
+                                        ? 'bg-gradient-to-r from-teal-600 to-green-600 text-white shadow-lg'
+                                        : 'border-2 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    {index + 1}
+                                  </button>
+                                ))}
+                              </div>
+                              
+                              <button
+                                onClick={() => setUserCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={userCurrentPage === totalPages}
+                                className="px-3 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                              >
+                                <ChevronRightIcon className="w-5 h-5" />
+                              </button>
                             </div>
-                          </td>
-                          <td className="p-4 text-sm text-gray-600">
-                            {new Date(user.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="p-4 text-sm text-gray-600">
-                            {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                          </td>
-                          <td className="p-4">
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="bg-red-500 text-white p-2 border-2 border-black hover:bg-red-600 transition-colors"
-                              title="Delete User"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                );
+              })()
             )}
           </div>
         )}
@@ -1190,40 +1785,40 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
       {/* Character Form Modal - Available from any tab */}
       {showCharacterForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-8">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-black uppercase">
-                  {editingCharacter ? 'Edit Character' : 'Add New Character'}
-                </h2>
-                <button
-                  onClick={resetForm}
-                  className="text-2xl font-bold hover:bg-gray-200 w-8 h-8 flex items-center justify-center border-2 border-black"
-                >
-                  ×
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold">
+                {editingCharacter ? 'Edit Character' : 'Add New Character'}
+              </h2>
+              <button
+                onClick={resetForm}
+                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Character Name *</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Character Name *</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                       required
+                      placeholder="Enter character name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Book *</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Book *</label>
                     <select
                       value={formData.book_id}
                       onChange={(e) => setFormData({ ...formData, book_id: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                       required
                     >
                       <option value="">Select a book...</option>
@@ -1236,11 +1831,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Color Theme *</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Color Theme *</label>
                     <select
                       value={formData.color}
                       onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                       required
                     >
                       {colorOptions.map(color => (
@@ -1250,7 +1845,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold uppercase mb-2">Character Image</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Character Image</label>
                     <div className="space-y-3">
                       {/* Image Preview */}
                       {imagePreview && (
@@ -1258,12 +1853,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
                           <img 
                             src={imagePreview} 
                             alt="Preview" 
-                            className="w-32 h-32 object-cover border-2 border-black"
+                            className="w-32 h-32 object-cover border-2 border-gray-200 rounded-lg shadow-lg"
                           />
                           <button
                             type="button"
                             onClick={removeImage}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 border-2 border-black hover:bg-red-600"
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1281,13 +1876,13 @@ const AdminDashboard = ({ admin, onLogout }) => {
                         />
                         <label
                           htmlFor="image-upload"
-                          className="flex items-center gap-2 px-4 py-3 border-2 border-black font-medium cursor-pointer hover:bg-gray-100 transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
                         >
-                          <Upload className="w-5 h-5" />
-                          <span>{imagePreview ? 'Change Image' : 'Upload Image'}</span>
+                          <Upload className="w-5 h-5 text-purple-600" />
+                          <span className="text-gray-700">{imagePreview ? 'Change Image' : 'Upload Image'}</span>
                         </label>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-500">
                         Supported formats: JPEG, PNG, GIF, WebP, SVG (Max 5MB)
                       </p>
                     </div>
@@ -1295,44 +1890,412 @@ const AdminDashboard = ({ admin, onLogout }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold uppercase mb-2">Personality/Instructions *</label>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">Personality/Instructions *</label>
                   <textarea
                     value={formData.personality}
                     onChange={(e) => setFormData({ ...formData, personality: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4 h-32"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow h-32 resize-none"
                     required
                     placeholder="You are [Character Name]..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold uppercase mb-2">Greeting Message *</label>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">Greeting Message *</label>
                   <textarea
                     value={formData.greeting}
                     onChange={(e) => setFormData({ ...formData, greeting: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4 h-24"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow h-24 resize-none"
                     required
                     placeholder="Welcome message from the character..."
                   />
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-4 border-t border-gray-200">
                   <button
                     type="submit"
-                    className="flex-1 bg-black text-white font-bold py-3 px-8 uppercase border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 px-8 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
                   >
                     {editingCharacter ? 'Update Character' : 'Create Character'}
                   </button>
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="flex-1 bg-white text-black font-bold py-3 px-8 uppercase border-2 border-black hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
                   >
                     Cancel
                   </button>
                 </div>
               </form>
+          </div>
+        </div>
+      )}
+
+      {/* Role Editing Modal */}
+      {editingUserRole && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-teal-600 to-green-600 text-white p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Edit User Role</h2>
+              <button
+                onClick={() => {
+                  setEditingUserRole(null);
+                  setSelectedRole('');
+                }}
+                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-r from-teal-50 to-green-50 border-2 border-teal-200 p-4 rounded-xl">
+                <p className="text-sm text-gray-600 mb-2">User:</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-600 to-green-600 flex items-center justify-center">
+                    <UserIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-800">{editingUserRole.username}</p>
+                    <p className="text-sm text-gray-600">{editingUserRole.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-3 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                  Select Role
+                </label>
+                <div className="space-y-3">
+                  {['user', 'moderator', 'admin'].map((role) => (
+                    <label
+                      key={role}
+                      className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        selectedRole === role
+                          ? 'border-teal-500 bg-gradient-to-r from-teal-50 to-green-50 shadow-lg'
+                          : 'border-gray-200 hover:border-teal-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value={role}
+                        checked={selectedRole === role}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                        className="w-5 h-5 text-teal-600 focus:ring-teal-500"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            role === 'admin' 
+                              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' 
+                              : role === 'moderator'
+                              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
+                              : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                          }`}>
+                            {role.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {role === 'admin' && 'Full administrative access to all features'}
+                          {role === 'moderator' && 'Can moderate content and manage users'}
+                          {role === 'user' && 'Regular user with standard permissions'}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleUpdateRole}
+                  className="flex-1 bg-gradient-to-r from-teal-600 to-green-600 text-white font-bold py-3 px-8 rounded-xl hover:from-teal-700 hover:to-green-700 transition-all shadow-xl hover:shadow-2xl transform hover:scale-[1.02]"
+                >
+                  Update Role
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingUserRole(null);
+                    setSelectedRole('');
+                  }}
+                  className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 text-white p-6 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-2xl font-bold">Edit User Details</h2>
+              <button
+                onClick={() => {
+                  setEditingUser(null);
+                  setUserFormData({ username: '', email: '', full_name: '', password: '' });
+                }}
+                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateUser} className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-6">
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 p-4 rounded-xl mb-4">
+                <p className="text-sm text-gray-600 mb-2">Editing user:</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 flex items-center justify-center">
+                    <UserIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-800">ID: {editingUser.id}</p>
+                    <p className="text-sm text-gray-600">Current: {editingUser.username}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={userFormData.username}
+                  onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter email"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={userFormData.full_name}
+                  onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter full name (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={userFormData.password || ''}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter new password (leave blank to keep current)"
+                  minLength="6"
+                />
+                <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password. Minimum 6 characters if changing.</p>
+              </div>
+
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-6">
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 text-white font-bold py-3 px-8 rounded-xl hover:from-blue-700 hover:via-cyan-700 hover:to-teal-700 transition-all shadow-xl hover:shadow-2xl transform hover:scale-[1.02]"
+                >
+                  Update User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setUserFormData({ username: '', email: '', full_name: '', password: '' });
+                  }}
+                  className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUserForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-r from-teal-600 via-green-600 to-emerald-600 text-white p-6 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-2xl font-bold">Add New User</h2>
+              <button
+                onClick={() => {
+                  setShowAddUserForm(false);
+                  setNewUserFormData({
+                    username: '',
+                    email: '',
+                    password: '',
+                    full_name: '',
+                    role: 'user'
+                  });
+                }}
+                className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateUser} className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                    Username *
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.username}
+                    onChange={(e) => setNewUserFormData({ ...newUserFormData, username: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all font-medium"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={newUserFormData.email}
+                    onChange={(e) => setNewUserFormData({ ...newUserFormData, email: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all font-medium"
+                    placeholder="Enter email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  value={newUserFormData.password}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, password: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter password (min 6 characters)"
+                  minLength="6"
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">Minimum 6 characters required</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={newUserFormData.full_name}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, full_name: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all font-medium"
+                  placeholder="Enter full name (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-3 bg-gradient-to-r from-teal-600 to-green-600 bg-clip-text text-transparent">
+                  Role *
+                </label>
+                <div className="space-y-3">
+                  {['user', 'moderator', 'admin'].map((role) => (
+                    <label
+                      key={role}
+                      className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                        newUserFormData.role === role
+                          ? 'border-teal-500 bg-gradient-to-r from-teal-50 to-green-50 shadow-lg'
+                          : 'border-gray-200 hover:border-teal-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="newUserRole"
+                        value={role}
+                        checked={newUserFormData.role === role}
+                        onChange={(e) => setNewUserFormData({ ...newUserFormData, role: e.target.value })}
+                        className="w-5 h-5 text-teal-600 focus:ring-teal-500"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            role === 'admin' 
+                              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' 
+                              : role === 'moderator'
+                              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
+                              : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+                          }`}>
+                            {role.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {role === 'admin' && 'Full administrative access to all features'}
+                          {role === 'moderator' && 'Can moderate content and manage users'}
+                          {role === 'user' && 'Regular user with standard permissions'}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white pb-6">
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-teal-600 via-green-600 to-emerald-600 text-white font-bold py-3 px-8 rounded-xl hover:from-teal-700 hover:via-green-700 hover:to-emerald-700 transition-all shadow-xl hover:shadow-2xl transform hover:scale-[1.02]"
+                >
+                  Create User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUserForm(false);
+                    setNewUserFormData({
+                      username: '',
+                      email: '',
+                      password: '',
+                      full_name: '',
+                      role: 'user'
+                    });
+                  }}
+                  className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

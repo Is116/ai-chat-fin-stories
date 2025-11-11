@@ -39,47 +39,54 @@ const AdminLogin = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
-      <div className="bg-white border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] max-w-md w-full p-8">
+    <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center p-4 relative overflow-hidden" style={{ fontFamily: 'Roboto, sans-serif' }}>
+      {/* Animated gradient background overlay */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-pink-500/20 animate-pulse"></div>
+      
+      {/* Decorative circles */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-3xl"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full opacity-20 blur-3xl"></div>
+      
+      <div className="bg-white/95 backdrop-blur-xl border-2 border-white/50 shadow-2xl max-w-md w-full p-8 rounded-3xl relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-block bg-black text-white p-4 mb-4">
+          <div className="inline-flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white p-5 rounded-3xl mb-4 shadow-xl transform hover:scale-105 transition-transform">
             <Lock className="w-12 h-12" />
           </div>
-          <h1 className="text-4xl font-black uppercase mb-2">Admin Login</h1>
-          <p className="text-gray-600 font-medium">Literary Chat Admin Panel</p>
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Admin Login</h1>
+          <p className="text-gray-700 font-semibold">Literary Chat Admin Panel</p>
         </div>
 
         {error && (
-          <div className="bg-red-100 border-2 border-red-500 text-red-700 p-4 mb-6 font-bold">
+          <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-400 text-red-700 p-4 mb-6 rounded-xl font-medium shadow-lg">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold uppercase mb-2">Username</label>
+            <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">Username or Email</label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-500" />
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
-                placeholder="Enter username"
+                className="w-full pl-11 pr-4 py-3 border-2 border-purple-200 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl transition-all hover:border-purple-300"
+                placeholder="Enter username or email"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold uppercase mb-2">Password</label>
+            <label className="block text-sm font-bold mb-2 bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-500" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 border-2 border-black font-medium focus:outline-none focus:border-4"
+                className="w-full pl-11 pr-4 py-3 border-2 border-purple-200 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent rounded-xl transition-all hover:border-purple-300"
                 placeholder="Enter password"
                 required
               />
@@ -89,16 +96,16 @@ const AdminLogin = ({ onLogin }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-black text-white font-bold py-4 px-6 uppercase border-2 border-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+            className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white font-bold py-4 px-6 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl rounded-xl transform hover:scale-[1.02]"
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="font-medium">Default credentials:</p>
-          <p className="font-mono bg-gray-100 p-2 mt-2 border-2 border-gray-300">
-            username: <strong>admin</strong> | password: <strong>admin123</strong>
+        <div className="mt-6 text-center text-sm text-gray-700">
+          <p className="font-semibold">Default credentials:</p>
+          <p className="font-mono bg-gradient-to-r from-purple-50 to-fuchsia-50 p-3 mt-2 border-2 border-purple-200 rounded-xl shadow-md">
+            username: <strong className="text-purple-700">admin</strong> | password: <strong className="text-purple-700">admin123</strong>
           </p>
         </div>
       </div>

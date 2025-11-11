@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const db = require('../database');
 
 const router = express.Router();
@@ -26,6 +27,70 @@ const verifyAdmin = (req, res, next) => {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
+
+// Create new user (admin only)
+router.post('/users', verifyAdmin, (req, res) => {
+  try {
+    const { username, email, password, full_name, role } = req.body;
+
+    // Validate required fields
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Validate role
+    const validRoles = ['user', 'moderator', 'admin'];
+    const userRole = role && validRoles.includes(role) ? role : 'user';
+
+    // Check for duplicate username
+    const existingUsername = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    if (existingUsername) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Check for duplicate email
+    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
+    // Insert user
+    const insert = db.prepare(`
+      INSERT INTO users (username, email, password, full_name, role)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    const result = insert.run(username, email, hashedPassword, full_name || null, userRole);
+
+    // Get created user (without password)
+    const newUser = db.prepare(`
+      SELECT id, username, email, full_name, role, created_at
+      FROM users WHERE id = ?
+    `).get(result.lastInsertRowid);
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: newUser
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
 
 // Get all users with statistics
 router.get('/users', verifyAdmin, (req, res) => {
@@ -119,6 +184,136 @@ router.delete('/users/:id', verifyAdmin, (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Update user role
+router.patch('/users/:id/role', verifyAdmin, (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    // Validate role
+    const validRoles = ['user', 'moderator', 'admin'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ 
+        error: 'Invalid role. Must be one of: user, moderator, admin' 
+      });
+    }
+
+    // Check if user exists
+    const user = db.prepare('SELECT id, username, email, role FROM users WHERE id = ?').get(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update role
+    const updateStmt = db.prepare('UPDATE users SET role = ? WHERE id = ?');
+    updateStmt.run(role, req.params.id);
+
+    // Get updated user
+    const updatedUser = db.prepare('SELECT id, username, email, role, full_name, created_at FROM users WHERE id = ?')
+      .get(req.params.id);
+
+    res.json({
+      message: 'User role updated successfully',
+      user: updatedUser,
+      previous_role: user.role,
+      new_role: role
+    });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
+// Update user details
+router.patch('/users/:id', verifyAdmin, (req, res) => {
+  try {
+    const { username, email, full_name, password } = req.body;
+    
+    // Validate at least one field is provided
+    if (!username && !email && full_name === undefined && !password) {
+      return res.status(400).json({ 
+        error: 'At least one field (username, email, full_name, or password) must be provided' 
+      });
+    }
+
+    // Validate password if provided
+    if (password && password.length < 6) {
+      return res.status(400).json({ 
+        error: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Check if user exists
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check for duplicate username or email (excluding current user)
+    if (username && username !== user.username) {
+      const existingUsername = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?')
+        .get(username, req.params.id);
+      if (existingUsername) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
+    }
+
+    if (email && email !== user.email) {
+      const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+        .get(email, req.params.id);
+      if (existingEmail) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+    }
+
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
+    
+    if (username) {
+      updates.push('username = ?');
+      values.push(username);
+    }
+    if (email) {
+      updates.push('email = ?');
+      values.push(email);
+    }
+    if (full_name !== undefined) {
+      updates.push('full_name = ?');
+      values.push(full_name || null);
+    }
+    if (password) {
+      updates.push('password = ?');
+      values.push(bcrypt.hashSync(password, 10));
+    }
+    
+    values.push(req.params.id);
+
+    // Update user
+    const updateStmt = db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`);
+    updateStmt.run(...values);
+
+    // Get updated user (without password)
+    const updatedUser = db.prepare(`
+      SELECT id, username, email, full_name, role, avatar, created_at, last_login
+      FROM users WHERE id = ?
+    `).get(req.params.id);
+
+    res.json({
+      message: 'User updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
   }
 });
 

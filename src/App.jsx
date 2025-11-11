@@ -8,6 +8,13 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserLogin from './components/UserLogin';
 import UserSignup from './components/UserSignup';
+import About from './components/pages/About';
+import HowItWorks from './components/pages/HowItWorks';
+import Contact from './components/pages/Contact';
+import FAQ from './components/pages/FAQ';
+import PrivacyPolicy from './components/pages/PrivacyPolicy';
+import Books from './components/pages/Books';
+import BookCharacters from './components/pages/BookCharacters';
 
 function App() {
   const [selectedCharacter, setSelectedCharacter] = useState(null);
@@ -54,6 +61,10 @@ function App() {
   };
 
   const handleBack = () => {
+    setSelectedCharacter(null);
+  };
+
+  const handleGoHome = () => {
     setSelectedCharacter(null);
   };
 
@@ -114,12 +125,21 @@ function App() {
           } 
         />
 
+        {/* Info Pages */}
+        <Route path="/about" element={<About user={user} onLogout={handleUserLogout} />} />
+        <Route path="/how-it-works" element={<HowItWorks user={user} onLogout={handleUserLogout} />} />
+        <Route path="/contact" element={<Contact user={user} onLogout={handleUserLogout} />} />
+        <Route path="/faq" element={<FAQ user={user} onLogout={handleUserLogout} />} />
+        <Route path="/privacy" element={<PrivacyPolicy user={user} onLogout={handleUserLogout} />} />
+        <Route path="/books" element={<Books user={user} onLogout={handleUserLogout} />} />
+        <Route path="/book/:bookId/characters" element={<BookCharacters user={user} onLogout={handleUserLogout} onSelectCharacter={handleSelectCharacter} />} />
+
         {/* Main App Routes */}
         <Route 
           path="/*" 
           element={
             <div className="flex flex-col min-h-screen">
-              <Navbar user={user} onLogout={handleUserLogout} />
+              <Navbar user={user} onLogout={handleUserLogout} onGoHome={handleGoHome} />
               <main className="flex-1">
                 {!selectedCharacter ? (
                   <CharacterSelection

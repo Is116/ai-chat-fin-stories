@@ -11,11 +11,12 @@ router.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+    return res.status(400).json({ error: 'Username/Email and password required' });
   }
 
   try {
-    const admin = db.prepare('SELECT * FROM admins WHERE username = ?').get(username);
+    // Find admin by username or email
+    const admin = db.prepare('SELECT * FROM admins WHERE username = ? OR email = ?').get(username, username);
 
     if (!admin) {
       return res.status(401).json({ error: 'Invalid credentials' });

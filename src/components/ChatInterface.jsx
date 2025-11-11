@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, ArrowLeft, Image as ImageIcon, X, Trash2, History } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Message from './Message';
 import { sendMessageToCharacter } from '../utils/api';
 
 const ChatInterface = ({ character, onBack, user }) => {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -147,7 +149,7 @@ const ChatInterface = ({ character, onBack, user }) => {
   const deleteConversation = async (convoId, e) => {
     e.stopPropagation();
     
-    if (!window.confirm('Are you sure you want to delete this conversation?')) {
+    if (!window.confirm(t('chat.confirmDelete'))) {
       return;
     }
 
@@ -306,45 +308,45 @@ const ChatInterface = ({ character, onBack, user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex flex-col">
       {/* Header */}
-      <div className={`bg-gradient-to-br ${character.color} border-b-4 border-black`}>
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 border-b border-gray-200 shadow-lg">
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex justify-between items-start mb-6">
             <button
               onClick={onBack}
-              className="bg-black text-white font-bold py-2 px-4 uppercase text-sm flex items-center gap-2 hover:bg-gray-800 transition-colors border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-white/10 backdrop-blur-sm text-white font-semibold py-2.5 px-4 text-sm flex items-center gap-2 hover:bg-white/20 transition-all rounded-lg border border-white/30"
             >
               <ArrowLeft className="w-4 h-4" />
-              All Characters
+              {t('chat.allCharacters')}
             </button>
             
             {user && (
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className="bg-white text-black font-bold py-2 px-4 uppercase text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="bg-white/10 backdrop-blur-sm text-white font-semibold py-2.5 px-4 text-sm flex items-center gap-2 hover:bg-white/20 transition-all rounded-lg border border-white/30"
                 >
                   <History className="w-4 h-4" />
-                  History ({conversations.length})
+                  {t('chat.history')} ({conversations.length})
                 </button>
                 <button
                   onClick={createNewConversation}
-                  className="bg-green-500 text-white font-bold py-2 px-4 uppercase text-sm hover:bg-green-600 transition-colors border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="bg-white text-blue-600 font-semibold py-2.5 px-4 text-sm hover:bg-gray-50 transition-all rounded-lg shadow-md"
                 >
-                  + New Chat
+                  + {t('chat.newChat')}
                 </button>
               </div>
             )}
           </div>
           
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl shadow-lg flex items-center justify-center overflow-hidden">
               {character.image ? (
                 <img 
                   src={character.image} 
                   alt={character.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover notranslate"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
@@ -354,9 +356,9 @@ const ChatInterface = ({ character, onBack, user }) => {
               <span className={`text-5xl ${character.image ? 'hidden' : 'flex'}`}>{character.avatar}</span>
             </div>
             <div className="text-white flex-1">
-              <h1 className="text-4xl md:text-5xl font-black uppercase mb-2">{character.name}</h1>
-              <p className="text-lg font-bold opacity-90">{character.book}</p>
-              <p className="text-sm font-medium opacity-75">by {character.author}</p>
+              <h1 className="text-4xl md:text-5xl font-bold mb-2 notranslate" translate="no">{character.name}</h1>
+              <p className="text-lg font-semibold opacity-90 notranslate" translate="no">{character.book}</p>
+              <p className="text-sm font-medium opacity-75">by <span className="notranslate" translate="no">{character.author}</span></p>
             </div>
           </div>
         </div>
@@ -364,38 +366,38 @@ const ChatInterface = ({ character, onBack, user }) => {
 
       {/* Conversation History Sidebar */}
       {showHistory && user && (
-        <div className="bg-white border-b-4 border-black">
+        <div className="bg-white border-b border-gray-200 shadow-sm">
           <div className="max-w-5xl mx-auto px-6 py-4">
-            <h3 className="text-xl font-black uppercase mb-4">Your Conversations with {character.name}</h3>
+            <h3 className="text-xl font-bold mb-4 text-gray-900">{t('chat.yourConversations')} <span className="notranslate" translate="no">{character.name}</span></h3>
             {conversations.length === 0 ? (
-              <p className="text-gray-600 font-medium">No previous conversations. Start chatting to create history!</p>
+              <p className="text-gray-600 font-medium">{t('chat.noPreviousConversations')}</p>
             ) : (
               <div className="grid gap-3 max-h-64 overflow-y-auto">
                 {conversations.map((convo) => (
                   <div
                     key={convo.id}
-                    className={`p-4 border-2 border-black cursor-pointer hover:bg-gray-50 transition-colors flex justify-between items-start ${
-                      convo.id === conversationId ? 'bg-yellow-100' : 'bg-white'
+                    className={`p-4 border rounded-lg cursor-pointer hover:border-blue-300 transition-all flex justify-between items-start shadow-sm hover:shadow-md ${
+                      convo.id === conversationId ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'
                     }`}
                     onClick={() => loadConversation(convo.id)}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold">{convo.title}</h4>
+                        <h4 className="font-semibold text-gray-900">{convo.title}</h4>
                         {convo.id === conversationId && (
-                          <span className="text-xs bg-black text-white px-2 py-1 uppercase font-bold">Current</span>
+                          <span className="text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white px-2 py-0.5 rounded-full font-semibold">{t('chat.current')}</span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-1">{convo.last_message}</p>
                       <div className="flex gap-4 mt-2 text-xs text-gray-500 font-medium">
-                        <span>{convo.message_count} messages</span>
+                        <span>{convo.message_count} {t('chat.messages')}</span>
                         <span>{new Date(convo.updated_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <button
                       onClick={(e) => deleteConversation(convo.id, e)}
-                      className="ml-4 p-2 hover:bg-red-100 rounded border-2 border-black"
-                      title="Delete conversation"
+                      className="ml-4 p-2 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-300 transition-colors"
+                      title={t('chat.deleteConversation')}
                     >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
@@ -422,12 +424,12 @@ const ChatInterface = ({ character, onBack, user }) => {
           
           {isLoading && (
             <div className="flex gap-4 mb-6">
-              <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-gradient-to-br ${character.color} overflow-hidden`}>
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl border border-gray-200 shadow-sm bg-gray-100 overflow-hidden">
                 {character.image ? (
                   <img 
                     src={character.image} 
                     alt={character.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover notranslate"
                     onError={(e) => {
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'block';
@@ -436,8 +438,8 @@ const ChatInterface = ({ character, onBack, user }) => {
                 ) : null}
                 <span className={`text-2xl ${character.image ? 'hidden' : 'block'}`}>{character.avatar}</span>
               </div>
-              <div className="p-5 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white">
-                <Loader2 className="w-6 h-6 animate-spin" />
+              <div className="p-5 rounded-2xl border border-gray-200 shadow-lg bg-white">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
               </div>
             </div>
           )}
@@ -447,7 +449,7 @@ const ChatInterface = ({ character, onBack, user }) => {
       </div>
 
       {/* Input Section */}
-      <div className="border-t-4 border-black bg-white">
+      <div className="border-t border-gray-200 bg-white shadow-lg">
         <div className="max-w-5xl mx-auto px-6 py-6">
           {/* Image Preview */}
           {imagePreview && (
@@ -455,11 +457,11 @@ const ChatInterface = ({ character, onBack, user }) => {
               <img 
                 src={imagePreview} 
                 alt="Preview" 
-                className="max-w-xs max-h-40 object-contain border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                className="max-w-xs max-h-40 object-contain rounded-lg border border-gray-200 shadow-md"
               />
               <button
                 onClick={removeImage}
-                className="absolute -top-2 -right-2 bg-black text-white rounded-full p-1 border-2 border-black hover:bg-gray-800"
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-md"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -477,11 +479,11 @@ const ChatInterface = ({ character, onBack, user }) => {
             
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-white border-2 border-black px-4 py-4 hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-white border border-gray-300 px-4 py-4 hover:bg-gray-50 transition-all rounded-lg shadow-sm hover:shadow-md"
               disabled={isLoading}
-              title="Upload image"
+              title={t('chat.uploadImage')}
             >
-              <ImageIcon className="w-5 h-5" />
+              <ImageIcon className="w-5 h-5 text-gray-600" />
             </button>
             
             <input
@@ -489,18 +491,18 @@ const ChatInterface = ({ character, onBack, user }) => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={`Message ${character.name}...`}
-              className="flex-1 border-2 border-black px-6 py-4 font-medium text-lg focus:outline-none focus:border-4 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              placeholder={`${t('chat.messagePlaceholder')} ${character.name}...`}
+              className="flex-1 border border-gray-300 px-6 py-4 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all rounded-lg shadow-sm"
               disabled={isLoading}
             />
             
             <button
               onClick={sendMessage}
               disabled={isLoading || (!inputMessage.trim() && !selectedImage)}
-              className="bg-black text-white px-8 py-4 font-bold uppercase tracking-wide border-2 border-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 font-semibold hover:from-blue-700 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center gap-3 rounded-lg shadow-lg hover:shadow-xl"
             >
               <Send className="w-5 h-5" />
-              Send
+              {t('chat.send')}
             </button>
           </div>
         </div>

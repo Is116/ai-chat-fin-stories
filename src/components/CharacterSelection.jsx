@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Sparkles, LogIn, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import CharacterCard from './CharacterCard';
 
 const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
+  const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const bookFilter = searchParams.get('book');
+  
   const [books, setBooks] = useState([]);
   const [currentBookIndex, setCurrentBookIndex] = useState(0);
   const [currentCharacterIndex, setCurrentCharacterIndex] = useState(0);
@@ -11,12 +16,26 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
   const [isPausedCharacters, setIsPausedCharacters] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slideDirection, setSlideDirection] = useState('next');
+  const [filteredCharacters, setFilteredCharacters] = useState([]);
+
+  // Number of books to show at once
+  const booksPerView = 3;
+
+  // Filter characters by book if URL parameter is present
+  useEffect(() => {
+    if (bookFilter) {
+      const filtered = characters.filter(char => String(char.book_id) === String(bookFilter));
+      setFilteredCharacters(filtered);
+    } else {
+      setFilteredCharacters(characters);
+    }
+  }, [characters, bookFilter]);
 
   // Group characters by book
   useEffect(() => {
     const groupedBooks = {};
     
-    characters.forEach(character => {
+    filteredCharacters.forEach(character => {
       const bookKey = character.book_title || 'Unknown Book';
       if (!groupedBooks[bookKey]) {
         groupedBooks[bookKey] = {
@@ -38,7 +57,19 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
     );
     
     setBooks(booksArray);
-  }, [characters]);
+  }, [filteredCharacters]);
+
+  // Get visible books for carousel
+  const getVisibleBooks = () => {
+    if (books.length === 0) return [];
+    if (books.length <= booksPerView) return books;
+    
+    const visible = [];
+    for (let i = 0; i < booksPerView; i++) {
+      visible.push(books[(currentBookIndex + i) % books.length]);
+    }
+    return visible;
+  };
 
   // Auto-slide books carousel
   useEffect(() => {
@@ -146,30 +177,30 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Login Prompt Banner */}
       {!user && (
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-400 border-b-4 border-black">
+        <div className="mx-6 mt-6 mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl border border-blue-500/30">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <LogIn className="w-6 h-6" />
-                <p className="font-bold text-lg">
-                  Sign in to start chatting with your favorite literary characters!
+              <div className="flex items-center gap-3 text-white">
+                <LogIn className="w-5 h-5" />
+                <p className="font-medium text-sm md:text-base">
+                  {t('hero.loginPrompt')}
                 </p>
               </div>
               <div className="flex gap-3">
                 <Link
                   to="/login"
-                  className="bg-black text-white font-bold py-3 px-6 uppercase text-sm border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="bg-white text-blue-600 font-semibold py-2 md:py-2.5 px-5 md:px-6 rounded-lg text-xs md:text-sm hover:bg-gray-50 transition-all shadow-md hover:shadow-lg"
                 >
-                  Login
+                  {t('auth.loginButton')}
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-white text-black font-bold py-3 px-6 uppercase text-sm border-2 border-black hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  className="bg-white/10 backdrop-blur-sm text-white font-semibold py-2 md:py-2.5 px-5 md:px-6 rounded-lg text-xs md:text-sm border border-white/30 hover:bg-white/20 transition-all"
                 >
-                  Sign Up
+                  {t('auth.signupButton')}
                 </Link>
               </div>
             </div>
@@ -178,41 +209,38 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
       )}
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-24">
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white mx-6 mt-6 rounded-3xl shadow-2xl">
+        <div className="max-w-7xl mx-auto px-6 py-16 md:py-20 lg:py-32">
           <div className="max-w-4xl">
-            <div className="inline-block bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-sm font-bold uppercase tracking-wide">Powered by Claude AI</span>
-              </div>
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4 md:mb-6 border border-white/20">
+              <Sparkles className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="text-xs md:text-sm font-medium tracking-wide">Powered by Claude AI</span>
             </div>
             
-            <h1 className="text-6xl md:text-7xl font-black mb-6 leading-tight uppercase">
-              Chat with YOUR<br />
-              <span className="text-yellow-300">Favorite Characters</span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight">
+              {t('hero.title').split('\n')[0]}<br />
+              <span className="bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">
+                {t('hero.title').split('\n')[1] || 'Favorite Characters'}
+              </span>
             </h1>
             
-            <p className="text-xl md:text-2xl font-medium mb-8 max-w-2xl leading-relaxed">
-              Step into the world of classic literature. Engage in authentic conversations with iconic characters powered by advanced AI technology.
+            <p className="text-base md:text-lg lg:text-xl font-normal mb-6 md:mb-8 max-w-2xl leading-relaxed text-white/90">
+              {t('hero.subtitle')}
             </p>
             
-            <div className="flex flex-wrap gap-4 text-sm font-bold">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <BookOpen className="w-4 h-4" />
-                <span>{books.length} Classic Books</span>
+            <div className="flex flex-wrap gap-2 md:gap-3 text-xs md:text-sm font-medium">
+              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+                <BookOpen className="w-3 h-3 md:w-4 md:h-4" />
+                <span>{books.length} {books.length !== 1 ? t('hero.classicBooksPlural') : t('hero.classicBooks')}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span>{characters.length} Literary Icons</span>
+              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+                <span>{filteredCharacters.length} {filteredCharacters.length !== 1 ? t('hero.literaryIconsPlural') : t('hero.literaryIcons')}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span>Real-time Responses</span>
+              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+                <span>{t('hero.realtimeResponses')}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span>Authentic Personalities</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span>Conversation History</span>
+              <div className="flex items-center gap-1.5 md:gap-2 bg-white/10 backdrop-blur-sm px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/20">
+                <span>{t('hero.authenticPersonalities')}</span>
               </div>
             </div>
           </div>
@@ -220,130 +248,185 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
       </div>
 
       {/* Books & Characters Section */}
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      <div className="max-w-7xl mx-auto px-6 py-16">
+        
+        {/* Book Filter Indicator */}
+        {bookFilter && books.length > 0 && (
+          <div className="mb-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-200 p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-xl font-bold">
+                    {t('character.filteredByBook')}
+                  </h3>
+                </div>
+                <p className="text-base font-medium text-gray-700">
+                  {t('character.showingCharactersFrom')} <span className="text-blue-600 notranslate" translate="no">{books[0]?.title}</span>
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {filteredCharacters.length} {filteredCharacters.length !== 1 ? t('character.charactersAvailablePlural') : t('character.charactersAvailable')}
+                </p>
+              </div>
+              <button
+                onClick={() => setSearchParams({})}
+                className="bg-gradient-to-r from-gray-900 to-gray-800 text-white font-medium py-2.5 px-6 rounded-lg text-sm hover:from-gray-800 hover:to-gray-700 transition-all shadow-md"
+              >
+                {t('books.clearFilter')}
+              </button>
+            </div>
+          </div>
+        )}
         
         {/* Section 1: Books Carousel */}
         <div className="mb-20">
-          <div className="mb-12">
-            <h2 className="text-5xl font-black uppercase mb-4">
-              Explore <span className="text-blue-600">Classic Books</span>
-            </h2>
-            <p className="text-xl text-gray-600 font-medium">
-              Discover timeless literary masterpieces
-            </p>
+          <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-3">
+                {t('books.exploreClassicBooks').split(' ').slice(0, 1).join(' ')} <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{t('books.exploreClassicBooks').split(' ').slice(1).join(' ')}</span>
+              </h2>
+              <p className="text-lg text-gray-600 font-normal">
+                {t('books.discoverTimeless')}
+              </p>
+            </div>
+            {!bookFilter && books.length > booksPerView && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={prevBook}
+                  className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 p-2.5 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all shadow-sm"
+                  aria-label="Previous book"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="font-semibold text-base min-w-[70px] text-center text-gray-700">
+                  {currentBookIndex + 1} / {books.length}
+                </span>
+                <button
+                  onClick={nextBook}
+                  className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 p-2.5 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all shadow-sm"
+                  aria-label="Next book"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {books.length > 0 && (
             <div className="relative">
-              {/* Carousel Container */}
+              {/* Books Grid Carousel */}
               <div 
-                className="bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden"
+                className="relative"
                 onMouseEnter={() => setIsPausedBooks(true)}
                 onMouseLeave={() => setIsPausedBooks(false)}
               >
-                <div className="relative" style={{ minHeight: '400px' }}>
-                  {/* Slide Animation Container */}
-                  <div 
-                    className="transition-transform duration-700 ease-in-out"
-                    style={{
-                      transform: `translateX(${slideDirection === 'next' && isTransitioning ? '-100%' : slideDirection === 'prev' && isTransitioning ? '100%' : '0'})`,
-                      opacity: isTransitioning ? 0 : 1
-                    }}
-                  >
-                    <div className="p-8 md:p-12">
-                      <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getVisibleBooks().map((book, idx) => (
+                    <div 
+                      key={`${book.title}-${idx}`}
+                      className="bg-white rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all overflow-hidden group"
+                    >
+                      <div className="grid grid-rows-[300px_1fr]">
                         {/* Book Cover */}
-                        <div className="flex-shrink-0">
+                        <div className="relative bg-gray-100 overflow-hidden">
                           <img 
-                            src={books[currentBookIndex].cover_image || '/book.svg'} 
-                            alt={books[currentBookIndex].title}
-                            className="w-64 h-80 object-contain border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-gradient-to-br from-blue-500 to-purple-600 p-8"
+                            src={book.cover_image ? `http://localhost:3001${book.cover_image}` : '/book.svg'} 
+                            alt={book.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 notranslate"
+                            onError={(e) => {
+                              e.target.src = '/book.svg';
+                            }}
                           />
                         </div>
 
                         {/* Book Info */}
-                        <div className="flex-1">
-                          <div className="mb-6">
-                            <h3 className="text-4xl font-black uppercase mb-3">
-                              {books[currentBookIndex].title}
+                        <div className="p-6 space-y-4">
+                          {/* Title & Author */}
+                          <div>
+                            <h3 className="text-xl font-bold mb-1 leading-tight text-gray-900 line-clamp-2 notranslate" translate="no">
+                              {book.title}
                             </h3>
-                            <p className="text-2xl text-gray-600 font-bold mb-4">
-                              by {books[currentBookIndex].author}
+                            <p className="text-sm text-gray-600 font-medium">
+                              by <span className="notranslate" translate="no">{book.author}</span>
                             </p>
-                            
-                            <div className="flex flex-wrap gap-3 mb-6">
-                              {books[currentBookIndex].genre && (
-                                <span className="bg-purple-500 text-white px-4 py-2 text-sm font-bold uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                  {books[currentBookIndex].genre}
-                                </span>
-                              )}
-                              {books[currentBookIndex].published_year && (
-                                <span className="bg-green-500 text-white px-4 py-2 text-sm font-bold uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                  {books[currentBookIndex].published_year}
-                                </span>
-                              )}
-                              <span className="bg-blue-500 text-white px-4 py-2 text-sm font-bold uppercase border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                {books[currentBookIndex].characters.length} Characters
+                          </div>
+                          
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2">
+                            {book.genre && (
+                              <span className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1 text-xs font-semibold rounded-full shadow-sm">
+                                {book.genre}
                               </span>
-                            </div>
+                            )}
+                            {book.published_year && (
+                              <span className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 text-xs font-semibold rounded-full shadow-sm">
+                                {book.published_year}
+                              </span>
+                            )}
                           </div>
 
-                          {books[currentBookIndex].description && (
-                            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                              {books[currentBookIndex].description}
+                          {/* Characters Count */}
+                          <div className="flex items-center gap-2 text-sm">
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                            <span className="font-semibold text-gray-700">
+                              {book.characters.length} Character{book.characters.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+
+                          {/* Description */}
+                          {book.description && (
+                            <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                              {book.description}
                             </p>
                           )}
 
-                          {/* Book Navigation */}
-                          <div className="flex items-center gap-4">
-                            <button
-                              onClick={prevBook}
-                              className="bg-black text-white p-3 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                          {/* Action Button */}
+                          <div className="pt-2">
+                            <Link
+                              to={`/book/${book.characters[0]?.book_id}/characters`}
+                              className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-2.5 px-4 rounded-lg text-sm hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                             >
-                              <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <span className="font-bold text-lg">
-                              {currentBookIndex + 1} / {books.length}
-                            </span>
-                            <button
-                              onClick={nextBook}
-                              className="bg-black text-white p-3 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                            >
-                              <ChevronRight className="w-6 h-6" />
-                            </button>
+                              View Characters
+                              <ChevronRight className="w-4 h-4" />
+                            </Link>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               {/* Carousel Indicators */}
-              <div className="flex justify-center gap-2 mt-6">
-                {books.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToBook(index)}
-                    className={`w-3 h-3 border-2 border-black transition-colors ${
-                      index === currentBookIndex ? 'bg-black' : 'bg-white'
-                    }`}
-                    aria-label={`Go to book ${index + 1}`}
-                  />
-                ))}
-              </div>
+              {books.length > booksPerView && (
+                <div className="flex justify-center gap-2 mt-8">
+                  {books.map((book, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToBook(index)}
+                      className={`transition-all rounded-full ${
+                        index === currentBookIndex 
+                          ? 'w-8 h-2 bg-gradient-to-r from-blue-600 to-purple-600' 
+                          : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to ${book.title}`}
+                      title={book.title}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Section 2: Characters Carousel */}
         <div>
-          <div className="mb-12">
-            <h2 className="text-5xl font-black uppercase mb-4">
-              Meet the <span className="text-purple-600">Characters</span>
+          <div className="mb-10">
+            <h2 className="text-4xl md:text-5xl font-bold mb-3">
+              {t('character.meetTheCharacters').split(' ').slice(0, -1).join(' ')} <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{t('character.meetTheCharacters').split(' ').slice(-1)}</span>
             </h2>
-            <p className="text-xl text-gray-600 font-medium">
-              Chat with legendary literary figures
+            <p className="text-lg text-gray-600 font-normal">
+              {t('character.chatWithLegendary')}
             </p>
           </div>
 
@@ -358,9 +441,9 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
                 {/* Previous Button */}
                 <button
                   onClick={prevCharacter}
-                  className="flex-shrink-0 bg-black text-white p-4 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10"
+                  className="flex-shrink-0 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 p-3 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all shadow-sm z-10"
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <ChevronLeft className="w-6 h-6" />
                 </button>
 
                 {/* Character Cards - Show 3 at a time with smooth slide */}
@@ -395,9 +478,9 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
                 {/* Next Button */}
                 <button
                   onClick={nextCharacter}
-                  className="flex-shrink-0 bg-black text-white p-4 border-2 border-black hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-10"
+                  className="flex-shrink-0 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-900 p-3 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all shadow-sm z-10"
                 >
-                  <ChevronRight className="w-8 h-8" />
+                  <ChevronRight className="w-6 h-6" />
                 </button>
               </div>
 
@@ -407,8 +490,8 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
                   <button
                     key={index}
                     onClick={() => goToCharacter(index)}
-                    className={`w-2 h-2 border-2 border-black transition-colors ${
-                      index === currentCharacterIndex ? 'bg-black' : 'bg-white'
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentCharacterIndex ? 'bg-gradient-to-r from-purple-600 to-pink-600 w-6' : 'bg-gray-300'
                     }`}
                     aria-label={`Go to character ${index + 1}`}
                   />
@@ -419,26 +502,190 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
         </div>
       </div>
 
+      {/* Features Section */}
+      <div className="bg-white py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              {t('features.title')}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              {t('features.subtitle')}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-8 rounded-2xl border border-blue-100 hover:shadow-xl transition-all">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+                <Sparkles className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">{t('features.aiPowered.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t('features.aiPowered.description')}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 hover:shadow-xl transition-all">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+                <BookOpen className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">{t('features.richLibrary.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t('features.richLibrary.description')}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-pink-50 to-red-50 p-8 rounded-2xl border border-pink-100 hover:shadow-xl transition-all">
+              <div className="bg-gradient-to-r from-pink-600 to-red-600 w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-3">{t('features.naturalDialogue.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t('features.naturalDialogue.description')}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl border border-green-100 hover:shadow-xl transition-all">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 w-14 h-14 rounded-xl flex items-center justify-center mb-6">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold mb-3">{t('features.privateSecure.title')}</h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t('features.privateSecure.description')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8 text-center text-white">
+            <div>
+              <div className="text-5xl font-bold mb-2">{books.length}+</div>
+              <div className="text-lg text-white/80">{t('stats.classicBooks')}</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold mb-2">{filteredCharacters.length}+</div>
+              <div className="text-lg text-white/80">{t('stats.literaryCharacters')}</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold mb-2">∞</div>
+              <div className="text-lg text-white/80">{t('stats.conversations')}</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold mb-2">24/7</div>
+              <div className="text-lg text-white/80">{t('stats.availability')}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works - Detailed */}
+      <div className="bg-white py-16 md:py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4">{t('howItWorks.title')}</h2>
+            <p className="text-base md:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
+              {t('howItWorks.subtitle')}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
+                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">1</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step1.title')}</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                {t('howItWorks.step1.description')}
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-purple-100 to-pink-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
+                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">2</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step2.title')}</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                {t('howItWorks.step2.description')}
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-pink-100 to-red-100 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6 border-4 border-white shadow-xl">
+                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-600 to-red-600 bg-clip-text text-transparent">3</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">{t('howItWorks.step3.title')}</h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+                {t('howItWorks.step3.description')}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      {!user && (
+        <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 py-16 md:py-20 relative overflow-hidden">
+          {/* Animated background elements */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-0 left-0 w-96 h-96 bg-pink-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+            <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+          </div>
+          
+          <div className="max-w-4xl mx-auto px-6 text-center text-white relative z-10">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 drop-shadow-lg">
+              {t('cta.title')}
+            </h2>
+            <p className="text-base md:text-lg lg:text-xl mb-6 md:mb-8 text-white/90 max-w-2xl mx-auto drop-shadow">
+              {t('cta.subtitle')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+              <Link
+                to="/signup"
+                className="bg-white text-purple-600 font-bold py-3 md:py-4 px-8 md:px-10 rounded-xl text-base md:text-lg hover:bg-gray-50 transition-all shadow-2xl hover:shadow-3xl transform hover:scale-105 hover:-translate-y-1"
+              >
+                {t('cta.getStartedFree')}
+              </Link>
+              <Link
+                to="/login"
+                className="bg-white/20 backdrop-blur-md text-white font-bold py-3 md:py-4 px-8 md:px-10 rounded-xl text-base md:text-lg border-2 border-white/50 hover:bg-white/30 transition-all shadow-xl hover:shadow-2xl transform hover:scale-105"
+              >
+                {t('cta.signIn')}
+              </Link>
+            </div>
+            <p className="mt-4 md:mt-6 text-xs md:text-sm text-white/80 drop-shadow">{t('cta.noCreditCard')}</p>
+          </div>
+        </div>
+      )}
+
       {/* Footer Info */}
-      <div className="bg-gray-100 border-t-4 border-black">
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid md:grid-cols-3 gap-8">
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-12 md:py-16">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             <div>
-              <h3 className="text-2xl font-black uppercase mb-3">How It Works</h3>
-              <p className="text-gray-700 font-medium">
-                Select a character, start chatting, and experience conversations that feel authentic to their personality and story.
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.authenticConversations')}</h3>
+              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+                {t('cta.authenticConversationsText')}
               </p>
             </div>
             <div>
-              <h3 className="text-2xl font-black uppercase mb-3">Stay in Character</h3>
-              <p className="text-gray-700 font-medium">
-                Each character maintains their unique voice, mannerisms, and perspective throughout your conversation.
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.stayInCharacter')}</h3>
+              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+                {t('cta.stayInCharacterText')}
               </p>
             </div>
             <div>
-              <h3 className="text-2xl font-black uppercase mb-3">Endless Possibilities</h3>
-              <p className="text-gray-700 font-medium">
-                Ask questions, seek advice, or simply enjoy a unique dialogue with literature's most beloved figures.
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">{t('cta.endlessPossibilities')}</h3>
+              <p className="text-sm md:text-base text-gray-600 font-normal leading-relaxed">
+                {t('cta.endlessPossibilitiesText')}
               </p>
             </div>
           </div>
