@@ -1,4 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+  <!-- Book cover background -->  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+
+  <rect width="200" height="300" fill="#4F46E5" rx="8"/>  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+
+  </svg>
+
+  <!-- Book spine shadow -->
+  <rect x="0" y="0" width="20" height="300" fill="#3730A3" opacity="0.3"/>
+  
+  <!-- Decorative lines -->
+  <rect x="30" y="40" width="140" height="4" fill="#FFF" opacity="0.3" rx="2"/>
+  <rect x="30" y="55" width="140" height="4" fill="#FFF" opacity="0.3" rx="2"/>
+  
+  <!-- Book icon in center -->
+  <g transform="translate(100, 150)">
+    <!-- Open book -->
+    <path d="M-40,-20 L-40,20 L-5,25 L-5,-15 Z" fill="#FFF" opacity="0.8"/>
+    <path d="M40,-20 L40,20 L5,25 L5,-15 Z" fill="#FFF" opacity="0.6"/>
+    <path d="M-5,-15 L-5,25 L5,25 L5,-15 Z" fill="#E0E7FF"/>
+    
+    <!-- Book lines -->
+    <line x1="-30" y1="-10" x2="-10" y2="-8" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="-30" y1="-5" x2="-10" y2="-3" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="-30" y1="0" x2="-10" y2="2" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="-30" y1="5" x2="-10" y2="7" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    
+    <line x1="30" y1="-10" x2="10" y2="-8" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="-5" x2="10" y2="-3" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="0" x2="10" y2="2" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="5" x2="10" y2="7" stroke="#4F46E5" stroke-width="1" opacity="0.5"/>
+  </g>
+  
+  <!-- Bottom decorative elements -->
+  <circle cx="100" cy="260" r="3" fill="#FFF" opacity="0.4"/>
+  <circle cx="90" cy="260" r="2" fill="#FFF" opacity="0.3"/>
+  <circle cx="110" cy="260" r="2" fill="#FFF" opacity="0.3"/>
+  
+  <!-- Text placeholder -->
+  <text x="100" y="230" font-family="Arial, sans-serif" font-size="14" fill="#FFF" text-anchor="middle" opacity="0.6">
+    No Cover
+  </text>
 </svg>

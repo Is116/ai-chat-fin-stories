@@ -41,17 +41,24 @@ const ChatInterface = ({ character, onBack, user }) => {
     
     try {
       const token = localStorage.getItem('userToken');
+      console.log('Loading conversation history with token:', token ? 'Token exists' : 'No token');
+      
       const response = await fetch('http://localhost:3001/api/conversations', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('Conversation history response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
         // Filter conversations for this character
         const characterConvos = data.filter(c => c.character_id === character.id);
         setConversations(characterConvos);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to load conversations:', errorData);
       }
     } catch (error) {
       console.error('Error loading conversation history:', error);
@@ -63,6 +70,7 @@ const ChatInterface = ({ character, onBack, user }) => {
 
     try {
       const token = localStorage.getItem('userToken');
+      console.log('Loading or creating conversation with token:', token ? 'Token exists' : 'No token');
       
       // Check if there's an existing active conversation
       const response = await fetch('http://localhost:3001/api/conversations', {
@@ -70,6 +78,8 @@ const ChatInterface = ({ character, onBack, user }) => {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      console.log('Load/create conversation response status:', response.status);
 
       if (response.ok) {
         const allConversations = await response.json();
@@ -85,6 +95,14 @@ const ChatInterface = ({ character, onBack, user }) => {
           // Create new conversation
           createNewConversation();
         }
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to load conversations:', errorData);
+        // Fallback to greeting on error
+        setMessages([{
+          role: 'assistant',
+          content: character.greeting || `Hello! I'm ${character.name}.`
+        }]);
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
@@ -233,68 +251,87 @@ const ChatInterface = ({ character, onBack, user }) => {
     setMessages(newMessages);
     setIsLoading(true);
 
-    // Save user message to database
-    if (user) {
-      await saveMessage('user', newMessage.content, newMessage.image || null);
-    }
-
     try {
-      // Build conversation history for API
-      const conversationHistory = [];
-      
-      for (const msg of newMessages) {
-        if (msg.image) {
-          // Extract base64 data from data URL
-          const base64Data = msg.image.split(',')[1];
-          const mimeType = msg.image.split(';')[0].split(':')[1];
-          
-          conversationHistory.push({
-            role: msg.role,
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mimeType,
-                  data: base64Data
-                }
-              },
-              ...(msg.content ? [{
-                type: 'text',
-                text: msg.content
-              }] : [])
-            ]
-          });
-        } else {
-          conversationHistory.push({
-            role: msg.role,
-            content: msg.content
-          });
-        }
-      }
+      if (user && conversationId) {
+        // Use server-side chat API (with RAG and secure API keys)
+        const token = localStorage.getItem('userToken');
+        const response = await fetch(`http://localhost:3001/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            role: 'user',
+            content: newMessage.content,
+            image: newMessage.image || null
+          })
+        });
 
-      const assistantResponse = await sendMessageToCharacter(character, conversationHistory);
-      const assistantMessage = { role: 'assistant', content: assistantResponse };
-      setMessages([...newMessages, assistantMessage]);
-      
-      // Save assistant message to database
-      if (user) {
-        await saveMessage('assistant', assistantResponse);
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+
+        const data = await response.json();
+        
+        // Server returns both user and AI messages
+        if (data.aiMessage) {
+          const assistantMessage = {
+            role: 'assistant',
+            content: data.aiMessage.content
+          };
+          setMessages([...newMessages, assistantMessage]);
+        } else if (data.error) {
+          throw new Error(data.error);
+        }
+      } else {
+        // Fallback to client-side API for non-logged in users
+        const conversationHistory = [];
+        
+        for (const msg of newMessages) {
+          if (msg.image) {
+            const base64Data = msg.image.split(',')[1];
+            const mimeType = msg.image.split(';')[0].split(':')[1];
+            
+            conversationHistory.push({
+              role: msg.role,
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: mimeType,
+                    data: base64Data
+                  }
+                },
+                ...(msg.content ? [{
+                  type: 'text',
+                  text: msg.content
+                }] : [])
+              ]
+            });
+          } else {
+            conversationHistory.push({
+              role: msg.role,
+              content: msg.content
+            });
+          }
+        }
+
+        const assistantResponse = await sendMessageToCharacter(character, conversationHistory);
+        const assistantMessage = { role: 'assistant', content: assistantResponse };
+        setMessages([...newMessages, assistantMessage]);
       }
       
       // Clear image after sending
       removeImage();
     } catch (error) {
+      console.error('Chat error:', error);
       const errorMessage = {
         role: 'assistant',
         content: "I apologize, but I seem to be having trouble speaking at the moment. Please try again."
       };
       setMessages([...newMessages, errorMessage]);
-      
-      // Save error message too
-      if (user) {
-        await saveMessage('assistant', errorMessage.content);
-      }
     } finally {
       setIsLoading(false);
     }

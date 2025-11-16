@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -96,7 +96,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create character (protected)
-router.post('/', authMiddleware, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), (req, res) => {
   const { name, book_id, personality, avatar, color, greeting } = req.body;
 
   if (!name || !book_id || !personality || !color || !greeting) {
@@ -138,7 +138,7 @@ router.post('/', authMiddleware, upload.single('image'), (req, res) => {
 });
 
 // Update character (protected)
-router.put('/:id', authMiddleware, upload.single('image'), (req, res) => {
+router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
   const { name, book_id, personality, avatar, color, greeting } = req.body;
 
   try {
@@ -202,16 +202,57 @@ router.put('/:id', authMiddleware, upload.single('image'), (req, res) => {
 });
 
 // Delete character (protected)
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   try {
-    const deleteStmt = db.prepare('DELETE FROM characters WHERE id = ?');
-    const result = deleteStmt.run(req.params.id);
+    // Get character details before deletion to delete files
+    const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(req.params.id);
     
-    if (result.changes === 0) {
+    if (!character) {
       return res.status(404).json({ error: 'Character not found' });
     }
+
+    // Delete in proper order to avoid foreign key constraints
+    // 1. Delete character persona
+    db.prepare('DELETE FROM character_personas WHERE character_id = ?').run(req.params.id);
+
+    // 2. Delete messages in conversations with this character
+    const conversations = db.prepare('SELECT id FROM conversations WHERE character_id = ?').all(req.params.id);
+    const conversationIds = conversations.map(c => c.id);
     
-    res.json({ message: 'Character deleted successfully' });
+    if (conversationIds.length > 0) {
+      const placeholders = conversationIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM messages WHERE conversation_id IN (${placeholders})`).run(...conversationIds);
+      db.prepare(`DELETE FROM conversations WHERE id IN (${placeholders})`).run(...conversationIds);
+    }
+
+    // 3. Delete extracted character entries
+    db.prepare('DELETE FROM extracted_characters WHERE character_id = ?').run(req.params.id);
+
+    // 4. Delete the character itself
+    const deleteStmt = db.prepare('DELETE FROM characters WHERE id = ?');
+    const result = deleteStmt.run(req.params.id);
+
+    // 5. Delete character image file if it exists and is not a default SVG
+    if (character.image && character.image.startsWith('/characters/character-')) {
+      const imagePath = path.join(__dirname, '../../public', character.image);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+          console.log('Deleted character image:', imagePath);
+        } catch (err) {
+          console.error('Error deleting character image:', err);
+        }
+      }
+    }
+    
+    res.json({ 
+      message: 'Character deleted successfully',
+      deleted: {
+        character_id: req.params.id,
+        conversations_deleted: conversations.length,
+        files_deleted: true
+      }
+    });
   } catch (error) {
     console.error('Delete character error:', error);
     res.status(500).json({ error: 'Failed to delete character' });

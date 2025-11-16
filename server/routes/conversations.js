@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
+const { generateCharacterResponse } = require('../services/ai-chat');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
@@ -128,7 +129,7 @@ router.post('/', verifyUser, (req, res) => {
 });
 
 // Add message to conversation
-router.post('/:id/messages', verifyUser, (req, res) => {
+router.post('/:id/messages', verifyUser, async (req, res) => {
   const { role, content, image } = req.body;
 
   if (!role || !content) {
@@ -141,14 +142,18 @@ router.post('/:id/messages', verifyUser, (req, res) => {
 
   try {
     // Verify conversation belongs to user
-    const conversation = db.prepare('SELECT * FROM conversations WHERE id = ? AND user_id = ?')
-      .get(req.params.id, req.userId);
+    const conversation = db.prepare(`
+      SELECT c.*, ch.id as character_id, ch.name as character_name, ch.personality
+      FROM conversations c
+      JOIN characters ch ON c.character_id = ch.id
+      WHERE c.id = ? AND c.user_id = ?
+    `).get(req.params.id, req.userId);
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Insert message
+    // Insert user message
     const insert = db.prepare(`
       INSERT INTO messages (conversation_id, role, content, image)
       VALUES (?, ?, ?, ?)
@@ -163,7 +168,55 @@ router.post('/:id/messages', verifyUser, (req, res) => {
     // Get created message
     const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
 
-    res.status(201).json(message);
+    // If it's a user message, generate AI response
+    if (role === 'user') {
+      try {
+        // Get conversation history
+        const conversationHistory = db.prepare(`
+          SELECT role, content, image FROM messages 
+          WHERE conversation_id = ? 
+          ORDER BY created_at ASC
+        `).all(req.params.id);
+
+        // Generate AI response using the AI chat service (with RAG)
+        const aiResponseData = await generateCharacterResponse(
+          conversation.character_id,
+          content,
+          conversationHistory,
+          image  // Pass the image to AI
+        );
+
+        // Extract the message from the response object
+        const aiResponse = aiResponseData.message || aiResponseData;
+
+        // Save AI response
+        const aiMessageInsert = db.prepare(`
+          INSERT INTO messages (conversation_id, role, content)
+          VALUES (?, 'assistant', ?)
+        `);
+        const aiResult = aiMessageInsert.run(req.params.id, aiResponse);
+        
+        const aiMessage = db.prepare('SELECT * FROM messages WHERE id = ?').get(aiResult.lastInsertRowid);
+
+        // Return both user message and AI response
+        return res.status(201).json({
+          userMessage: message,
+          aiMessage: aiMessage
+        });
+      } catch (aiError) {
+        console.error('AI response generation error:', aiError);
+        
+        // Return user message even if AI fails
+        // The frontend can handle the error
+        return res.status(201).json({
+          userMessage: message,
+          error: 'Failed to generate AI response'
+        });
+      }
+    }
+
+    // If it's an assistant message (manual), just return it
+    res.status(201).json({ userMessage: message });
   } catch (error) {
     console.error('Add message error:', error);
     res.status(500).json({ error: 'Failed to add message' });

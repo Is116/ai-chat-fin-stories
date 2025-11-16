@@ -8,6 +8,7 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import UserLogin from './components/UserLogin';
 import UserSignup from './components/UserSignup';
+import AuthCallback from './components/pages/AuthCallback';
 import About from './components/pages/About';
 import HowItWorks from './components/pages/HowItWorks';
 import Contact from './components/pages/Contact';
@@ -113,6 +114,7 @@ function App() {
         {/* User Auth Routes */}
         <Route path="/login" element={<UserLogin onLogin={handleUserLogin} />} />
         <Route path="/signup" element={<UserSignup onLogin={handleUserLogin} />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin onLogin={handleAdminLogin} />} />

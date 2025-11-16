@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../database');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -165,21 +165,31 @@ router.get('/:id', (req, res) => {
 });
 
 // POST create new book (protected)
-router.post('/', authMiddleware, combinedUpload.fields([
+router.post('/', requireAdmin, combinedUpload.fields([
   { name: 'cover_image', maxCount: 1 },
   { name: 'pdf_file', maxCount: 1 }
 ]), (req, res) => {
+  console.log('🔥🔥🔥 POST /api/books CALLED 🔥🔥🔥');
   const { title, author, description, published_year, genre } = req.body;
+
+  console.log('📥 Create book request body:', req.body);
+  console.log('📁 Files:', req.files);
 
   if (!title || !author) {
     return res.status(400).json({ error: 'Title and author are required' });
   }
 
-  // Get cover image path if uploaded
-  let cover_image = req.body.cover_image_url || null;
+  // Get cover image path - check multiple sources
+  let cover_image = req.body.cover_image || req.body.cover_image_url || null;
+  console.log('📝 cover_image from req.body:', req.body.cover_image);
+  console.log('📝 cover_image_url from req.body:', req.body.cover_image_url);
+  
   if (req.files && req.files['cover_image']) {
     cover_image = `/books/${req.files['cover_image'][0].filename}`;
+    console.log('📝 cover_image from uploaded file:', cover_image);
   }
+  
+  console.log('🖼️  Final cover_image value:', cover_image);
 
   // Get PDF file path if uploaded
   let pdf_file = null;
@@ -205,7 +215,7 @@ router.post('/', authMiddleware, combinedUpload.fields([
 });
 
 // PUT update book (protected)
-router.put('/:id', authMiddleware, combinedUpload.fields([
+router.put('/:id', requireAdmin, combinedUpload.fields([
   { name: 'cover_image', maxCount: 1 },
   { name: 'pdf_file', maxCount: 1 }
 ]), (req, res) => {
@@ -290,26 +300,88 @@ router.put('/:id', authMiddleware, combinedUpload.fields([
 });
 
 // DELETE book (protected)
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   try {
-    // Check if book has characters
-    const characterCount = db.prepare('SELECT COUNT(*) as count FROM characters WHERE book_id = ?')
-      .get(req.params.id).count;
-
-    if (characterCount > 0) {
-      return res.status(400).json({ 
-        error: `Cannot delete book with ${characterCount} character(s). Delete characters first.` 
-      });
-    }
-
-    const stmt = db.prepare('DELETE FROM books WHERE id = ?');
-    const result = stmt.run(req.params.id);
-
-    if (result.changes === 0) {
+    // Get book details before deletion to delete files
+    const book = db.prepare('SELECT * FROM books WHERE id = ?').get(req.params.id);
+    
+    if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    res.json({ message: 'Book deleted successfully' });
+    // Get all characters associated with this book
+    const characters = db.prepare('SELECT id FROM characters WHERE book_id = ?').all(req.params.id);
+    const characterIds = characters.map(c => c.id);
+
+    // Delete in proper order to avoid foreign key constraints
+    // 1. Delete character personas for these characters
+    if (characterIds.length > 0) {
+      const placeholders = characterIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM character_personas WHERE character_id IN (${placeholders})`).run(...characterIds);
+    }
+
+    // 2. Delete extracted characters for this book
+    db.prepare('DELETE FROM extracted_characters WHERE book_id = ?').run(req.params.id);
+
+    // 3. Delete book chunks
+    db.prepare('DELETE FROM book_chunks WHERE book_id = ?').run(req.params.id);
+
+    // 4. Delete messages in conversations with these characters
+    if (characterIds.length > 0) {
+      const conversations = db.prepare(`
+        SELECT id FROM conversations WHERE character_id IN (${characterIds.map(() => '?').join(',')})
+      `).all(...characterIds);
+      
+      const conversationIds = conversations.map(c => c.id);
+      if (conversationIds.length > 0) {
+        const convPlaceholders = conversationIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM messages WHERE conversation_id IN (${convPlaceholders})`).run(...conversationIds);
+        db.prepare(`DELETE FROM conversations WHERE id IN (${convPlaceholders})`).run(...conversationIds);
+      }
+    }
+
+    // 5. Delete characters
+    db.prepare('DELETE FROM characters WHERE book_id = ?').run(req.params.id);
+
+    // 6. Delete the book itself
+    const deleteBookStmt = db.prepare('DELETE FROM books WHERE id = ?');
+    const result = deleteBookStmt.run(req.params.id);
+
+    // 7. Delete associated files from filesystem
+    // Delete cover image if it exists and is not a default image
+    if (book.cover_image && book.cover_image.startsWith('/books/') && !book.cover_image.includes('/pdfs/')) {
+      const coverPath = path.join(__dirname, '../../public', book.cover_image);
+      if (fs.existsSync(coverPath)) {
+        try {
+          fs.unlinkSync(coverPath);
+          console.log('Deleted cover image:', coverPath);
+        } catch (err) {
+          console.error('Error deleting cover image:', err);
+        }
+      }
+    }
+
+    // Delete PDF file if it exists
+    if (book.pdf_file && book.pdf_file.startsWith('/books/pdfs/')) {
+      const pdfPath = path.join(__dirname, '../../public', book.pdf_file);
+      if (fs.existsSync(pdfPath)) {
+        try {
+          fs.unlinkSync(pdfPath);
+          console.log('Deleted PDF file:', pdfPath);
+        } catch (err) {
+          console.error('Error deleting PDF file:', err);
+        }
+      }
+    }
+
+    res.json({ 
+      message: 'Book deleted successfully',
+      deleted: {
+        book_id: req.params.id,
+        characters_deleted: characters.length,
+        files_deleted: true
+      }
+    });
   } catch (error) {
     console.error('Delete book error:', error);
     res.status(500).json({ error: 'Failed to delete book' });

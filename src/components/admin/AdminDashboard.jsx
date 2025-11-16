@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, LogOut, User as UserIcon, Users, BookOpen, Shield, MessageSquare, Library, ChevronDown, ChevronRight, Upload, X, Search, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, LogOut, User as UserIcon, Users, BookOpen, Shield, MessageSquare, Library, ChevronDown, ChevronRight, Upload, X, Search, ChevronLeft, ChevronRight as ChevronRightIcon, Sparkles } from 'lucide-react';
 
 const AdminDashboard = ({ admin, onLogout }) => {
   const [activeTab, setActiveTab] = useState('books'); // 'books', 'characters', or 'users'
@@ -9,6 +9,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [users, setUsers] = useState([]);
   const [expandedBooks, setExpandedBooks] = useState(new Set()); // Track which books are expanded
   const [isLoading, setIsLoading] = useState(true);
+  const [generatingCharacters, setGeneratingCharacters] = useState(new Set()); // Track which books are generating characters
   const [showBookForm, setShowBookForm] = useState(false);
   const [showCharacterForm, setShowCharacterForm] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
@@ -83,6 +84,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [bookImagePreview, setBookImagePreview] = useState(null);
   const [bookPdfFile, setBookPdfFile] = useState(null);
   const [bookPdfFileName, setBookPdfFileName] = useState(null);
+  const [analyzingPdf, setAnalyzingPdf] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'books') {
@@ -178,6 +180,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
     e.preventDefault();
     const token = localStorage.getItem('adminToken');
 
+    console.log('🔍 DEBUG - handleBookSubmit called');
+    console.log('📝 bookFormData:', bookFormData);
+    console.log('🖼️  bookImageFile:', bookImageFile);
+    console.log('📄 bookPdfFile:', bookPdfFile);
+
     try {
       const url = editingBook
         ? `http://localhost:3001/api/books/${editingBook.id}`
@@ -196,11 +203,19 @@ const AdminDashboard = ({ admin, onLogout }) => {
         formData.append('published_year', bookFormData.published_year);
         formData.append('genre', bookFormData.genre);
         
+        // Include AI-generated cover_image path if available (and no manual image uploaded)
+        if (!bookImageFile && bookFormData.cover_image) {
+          console.log('✅ Adding AI-generated cover_image to FormData:', bookFormData.cover_image);
+          formData.append('cover_image', bookFormData.cover_image);
+        }
+        
         if (bookImageFile) {
+          console.log('✅ Adding uploaded image file to FormData');
           formData.append('cover_image', bookImageFile);
         }
         
         if (bookPdfFile) {
+          console.log('✅ Adding PDF file to FormData');
           formData.append('pdf_file', bookPdfFile);
         }
 
@@ -213,6 +228,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
         });
       } else {
         // No files, use JSON
+        console.log('📤 Sending book data as JSON:', bookFormData);
         response = await fetch(url, {
           method,
           headers: {
@@ -368,6 +384,104 @@ const AdminDashboard = ({ admin, onLogout }) => {
     } catch (error) {
       console.error('Error deleting character:', error);
       alert('Failed to delete character');
+    }
+  };
+
+  const handleGenerateCharacters = async (bookId) => {
+    if (!confirm('This will use AI to automatically extract characters from the book PDF and create them. This may take 1-2 minutes. Continue?')) return;
+
+    const token = localStorage.getItem('adminToken');
+    
+    // Add book to generating set
+    setGeneratingCharacters(prev => new Set([...prev, bookId]));
+
+    try {
+      console.log('🚀 Starting AI character generation...');
+
+      // Call the simplified endpoint that does everything
+      const response = await fetch(`http://localhost:3001/api/ai-processing/process-and-generate/${bookId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate characters');
+      }
+
+      const result = await response.json();
+      
+      console.log('✅ Characters generated:', result);
+
+      // Refresh data
+      await fetchBooks();
+      await fetchCharacters();
+
+      alert(`✅ Success! Generated ${result.characters.length} characters:\n${result.characters.map(c => `• ${c.name}`).join('\n')}\n\nYou can now chat with them!`);
+    } catch (error) {
+      console.error('❌ Error generating characters:', error);
+      alert(`Failed to generate characters: ${error.message}`);
+    } finally {
+      // Remove book from generating set
+      setGeneratingCharacters(prev => {
+        const next = new Set(prev);
+        next.delete(bookId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteAllCharacters = async (bookId, bookTitle) => {
+    // Get characters count for this book
+    const bookCharacters = characters.filter(c => c.book_id === bookId);
+    
+    if (bookCharacters.length === 0) {
+      alert('No characters found for this book.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ALL ${bookCharacters.length} character(s) from "${bookTitle}"?\n\nThis will permanently delete:\n${bookCharacters.map(c => `• ${c.name}`).join('\n')}\n\nThis action cannot be undone!`)) return;
+
+    const token = localStorage.getItem('adminToken');
+    
+    try {
+      let deletedCount = 0;
+      let failedCount = 0;
+
+      // Delete each character
+      for (const character of bookCharacters) {
+        try {
+          const response = await fetch(`http://localhost:3001/api/characters/${character.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            deletedCount++;
+          } else {
+            failedCount++;
+            console.error(`Failed to delete character ${character.name}`);
+          }
+        } catch (error) {
+          failedCount++;
+          console.error(`Error deleting character ${character.name}:`, error);
+        }
+      }
+
+      // Refresh data
+      await fetchBooks();
+      await fetchCharacters();
+
+      if (failedCount === 0) {
+        alert(`✅ Successfully deleted all ${deletedCount} character(s) from "${bookTitle}"`);
+      } else {
+        alert(`⚠️ Deleted ${deletedCount} character(s), but ${failedCount} failed. Check console for details.`);
+      }
+    } catch (error) {
+      console.error('Error deleting characters:', error);
+      alert(`Failed to delete characters: ${error.message}`);
     }
   };
 
@@ -597,7 +711,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
     setBookFormData({ ...bookFormData, cover_image: '' });
   };
 
-  const handleBookPdfChange = (e) => {
+  const handleBookPdfChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
@@ -614,6 +728,63 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
       setBookPdfFile(file);
       setBookPdfFileName(file.name);
+
+      // Automatically analyze PDF with AI
+      if (confirm('Would you like AI to automatically extract book information from this PDF? This will analyze the PDF and fill in title, author, description, genre, and year.')) {
+        await analyzePdfWithAI(file);
+      }
+    }
+  };
+
+  const analyzePdfWithAI = async (pdfFile) => {
+    setAnalyzingPdf(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('pdf', pdfFile);
+
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('http://localhost:3001/api/ai-processing/analyze-book-metadata', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to analyze PDF');
+      }
+
+      const result = await response.json();
+      
+      console.log('📚 AI Analysis Result:', result);
+      
+      // Auto-fill the form with AI-extracted data INCLUDING cover image
+      setBookFormData({
+        title: result.title || '',
+        author: result.author || '',
+        description: result.description || '',
+        genre: result.genre || '',
+        published_year: result.published_year || '',
+        cover_image: result.cover_image || bookFormData.cover_image // Use AI-generated cover if available
+      });
+
+      // If a cover image was generated, show it in the preview
+      if (result.cover_image) {
+        setBookImagePreview(`http://localhost:3001${result.cover_image}`);
+        console.log('✅ Cover image set:', result.cover_image);
+      }
+
+      alert('✅ Book information extracted successfully!\n' + 
+            (result.cover_image ? '📚 Cover image generated automatically!' : '') +
+            '\n\nReview and edit if needed, then click Save.');
+    } catch (error) {
+      console.error('Error analyzing PDF:', error);
+      alert(`Failed to analyze PDF: ${error.message}\n\nPlease fill in the book details manually.`);
+    } finally {
+      setAnalyzingPdf(false);
     }
   };
 
@@ -888,7 +1059,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                     {/* Book Cover Image */}
                                     <div className="flex-shrink-0">
                                       <img 
-                                        src={book.cover_image || '/book.svg'} 
+                                        src={book.cover_image ? `http://localhost:3001${book.cover_image}` : '/book.svg'} 
                                         alt={book.title}
                                         className="w-28 h-40 object-cover rounded-lg shadow-lg border-2 border-gray-200"
                                       />
@@ -931,6 +1102,41 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                       )}
                                     </div>
                                     <div className="flex gap-2 flex-shrink-0">
+                                      {book.pdf_file && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleGenerateCharacters(book.id);
+                                          }}
+                                          disabled={generatingCharacters.has(book.id)}
+                                          className={`${
+                                            generatingCharacters.has(book.id)
+                                              ? 'bg-gray-400 cursor-not-allowed'
+                                              : 'bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800'
+                                          } text-white p-3 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2`}
+                                          title="Generate Characters with AI"
+                                        >
+                                          <Sparkles className={`w-5 h-5 ${generatingCharacters.has(book.id) ? 'animate-spin' : ''}`} />
+                                          <span className="text-sm font-semibold hidden sm:inline">
+                                            {generatingCharacters.has(book.id) ? 'Generating...' : 'AI Generate'}
+                                          </span>
+                                        </button>
+                                      )}
+                                      {book.characters?.length > 0 && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteAllCharacters(book.id, book.title);
+                                          }}
+                                          className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white p-3 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                                          title="Delete All Characters"
+                                        >
+                                          <Trash2 className="w-5 h-5" />
+                                          <span className="text-sm font-semibold hidden sm:inline">
+                                            Delete All Characters
+                                          </span>
+                                        </button>
+                                      )}
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -1073,7 +1279,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
             {/* Book Form Modal */}
             {showBookForm && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                   <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
                     <h2 className="text-2xl font-bold">
                       {editingBook ? 'Edit Book' : 'Add New Book'}
@@ -1086,180 +1292,285 @@ const AdminDashboard = ({ admin, onLogout }) => {
                     </button>
                   </div>
                 
-                  <form onSubmit={handleBookSubmit} className="p-6 space-y-6 overflow-y-auto">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2 text-gray-700">Book Title *</label>
-                      <input
-                        type="text"
-                        value={bookFormData.title}
-                        onChange={(e) => setBookFormData({ ...bookFormData, title: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                        required
-                        placeholder="Enter book title"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2 text-gray-700">Author *</label>
-                      <input
-                        type="text"
-                        value={bookFormData.author}
-                        onChange={(e) => setBookFormData({ ...bookFormData, author: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                        required
-                        placeholder="Enter author name"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2 text-gray-700">Genre</label>
-                      <input
-                        type="text"
-                        value={bookFormData.genre}
-                        onChange={(e) => setBookFormData({ ...bookFormData, genre: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                        placeholder="e.g., Classic Literature, Mystery"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold mb-2 text-gray-700">Published Year</label>
-                      <input
-                        type="number"
-                        value={bookFormData.published_year}
-                        onChange={(e) => setBookFormData({ ...bookFormData, published_year: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                        placeholder="e.g., 1925"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700">Book Cover Image</label>
-                    <div className="space-y-3">
-                      {/* Image Preview */}
-                      {bookImagePreview && (
-                        <div className="relative inline-block">
-                          <img 
-                            src={bookImagePreview} 
-                            alt="Cover Preview" 
-                            className="w-48 h-64 object-cover border-2 border-gray-200 rounded-lg shadow-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeBookImage}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                      
-                      {/* File Upload Input */}
-                      <div className="relative">
-                        <input
-                          type="file"
-                          id="book-image-upload"
-                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
-                          onChange={handleBookImageChange}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="book-image-upload"
-                          className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
-                        >
-                          <Upload className="w-5 h-5 text-blue-600" />
-                          <span className="text-gray-700">{bookImagePreview ? 'Change Cover Image' : 'Upload Cover Image'}</span>
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        Supported formats: JPEG, PNG, GIF, WebP, SVG (Max 5MB)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700">Book PDF File</label>
-                    <div className="space-y-3">
-                      {/* PDF File Name Display / Download Link */}
-                      {(bookPdfFileName || bookFormData.pdf_file) && (
-                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg">
-                          <BookOpen className="w-6 h-6 text-blue-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm truncate text-gray-800">{bookPdfFileName || 'Current PDF'}</p>
-                            {bookFormData.pdf_file && !bookPdfFile && (
-                              <a 
-                                href={`http://localhost:3001${bookFormData.pdf_file}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-semibold"
-                              >
-                                View PDF →
-                              </a>
-                            )}
+                  <form onSubmit={handleBookSubmit} className="p-8 space-y-6 overflow-y-auto">
+                    {!editingBook ? (
+                      /* Add New Book - Simple PDF Upload */
+                      <div className="space-y-6">
+                        <div className="text-center py-6">
+                          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-4">
+                            <Sparkles className="w-10 h-10 text-purple-600" />
                           </div>
-                          <button
-                            type="button"
-                            onClick={removeBookPdf}
-                            className="bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 flex-shrink-0 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Book</h3>
+                          <p className="text-gray-600">
+                            Just upload a PDF and AI will automatically extract all book details!
+                          </p>
                         </div>
-                      )}
-                      
-                      {/* PDF Upload Input */}
-                      <div className="relative">
-                        <input
-                          type="file"
-                          id="book-pdf-upload"
-                          accept="application/pdf"
-                          onChange={handleBookPdfChange}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="book-pdf-upload"
-                          className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
-                        >
-                          <Upload className="w-5 h-5 text-purple-600" />
-                          <span className="text-gray-700">{bookPdfFileName ? 'Change PDF File' : 'Upload PDF File'}</span>
-                        </label>
+
+                        {/* PDF Upload Section */}
+                        <div className="space-y-4">
+                          {/* PDF File Name Display */}
+                          {bookPdfFileName && (
+                            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg">
+                              <BookOpen className="w-8 h-8 text-blue-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-sm truncate text-gray-800">{bookPdfFileName}</p>
+                                <p className="text-xs text-gray-600">Ready to upload</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={removeBookPdf}
+                                className="bg-red-500 text-white rounded-full p-2 shadow-lg hover:bg-red-600 flex-shrink-0 transition-colors"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* PDF Upload Input */}
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id="book-pdf-upload"
+                              accept="application/pdf"
+                              onChange={handleBookPdfChange}
+                              className="hidden"
+                              disabled={analyzingPdf}
+                              required
+                            />
+                            <label
+                              htmlFor="book-pdf-upload"
+                              className={`flex flex-col items-center justify-center gap-3 px-6 py-12 border-4 border-dashed rounded-2xl font-medium cursor-pointer transition-all ${
+                                analyzingPdf 
+                                  ? 'border-gray-300 bg-gray-50 opacity-50 cursor-not-allowed' 
+                                  : 'border-purple-300 bg-gradient-to-br from-purple-50 to-blue-50 hover:border-purple-500 hover:shadow-lg'
+                              }`}
+                            >
+                              <Upload className="w-16 h-16 text-purple-600" />
+                              <div className="text-center">
+                                <span className="block text-lg font-bold text-gray-900">
+                                  {bookPdfFileName ? 'Change PDF File' : 'Click to Upload PDF'}
+                                </span>
+                                <span className="block text-sm text-gray-600 mt-1">
+                                  or drag and drop your book here
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                          
+                          {/* AI Analyzing Indicator */}
+                          {analyzingPdf && (
+                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-6 flex items-center gap-4">
+                              <Sparkles className="w-8 h-8 text-purple-600 animate-spin flex-shrink-0" />
+                              <div>
+                                <p className="text-base font-bold text-purple-900">AI is analyzing your PDF...</p>
+                                <p className="text-sm text-purple-700 mt-1">Extracting title, author, description, genre, and year. Please wait.</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* AI Extracted Data Display */}
+                          {bookFormData.title && !analyzingPdf && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 space-y-3">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                                <p className="text-base font-bold text-green-900">Book Information Extracted!</p>
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <p><span className="font-semibold text-gray-700">Title:</span> <span className="text-gray-900">{bookFormData.title}</span></p>
+                                <p><span className="font-semibold text-gray-700">Author:</span> <span className="text-gray-900">{bookFormData.author}</span></p>
+                                {bookFormData.genre && <p><span className="font-semibold text-gray-700">Genre:</span> <span className="text-gray-900">{bookFormData.genre}</span></p>}
+                                {bookFormData.published_year && <p><span className="font-semibold text-gray-700">Year:</span> <span className="text-gray-900">{bookFormData.published_year}</span></p>}
+                                {bookFormData.description && <p><span className="font-semibold text-gray-700">Description:</span> <span className="text-gray-900">{bookFormData.description}</span></p>}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <p className="text-sm text-center text-gray-500">
+                            📄 Supported format: PDF (Max 100MB) • 🤖 AI-powered extraction
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Supported format: PDF (Max 100MB)
-                      </p>
+                    ) : (
+                      /* Edit Book - Show All Fields */
+                      <>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold mb-2 text-gray-700">Book Title *</label>
+                            <input
+                              type="text"
+                              value={bookFormData.title}
+                              onChange={(e) => setBookFormData({ ...bookFormData, title: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                              required
+                              placeholder="Enter book title"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold mb-2 text-gray-700">Author *</label>
+                            <input
+                              type="text"
+                              value={bookFormData.author}
+                              onChange={(e) => setBookFormData({ ...bookFormData, author: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                              required
+                              placeholder="Enter author name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold mb-2 text-gray-700">Genre</label>
+                            <input
+                              type="text"
+                              value={bookFormData.genre}
+                              onChange={(e) => setBookFormData({ ...bookFormData, genre: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                              placeholder="e.g., Classic Literature, Mystery"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold mb-2 text-gray-700">Published Year</label>
+                            <input
+                              type="number"
+                              value={bookFormData.published_year}
+                              onChange={(e) => setBookFormData({ ...bookFormData, published_year: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                              placeholder="e.g., 1925"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-gray-700">Description</label>
+                          <textarea
+                            value={bookFormData.description}
+                            onChange={(e) => setBookFormData({ ...bookFormData, description: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow h-32 resize-none"
+                            placeholder="Brief description of the book..."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-gray-700">Book Cover Image</label>
+                          <div className="space-y-3">
+                            {bookImagePreview && (
+                              <div className="relative inline-block">
+                                <img 
+                                  src={bookImagePreview} 
+                                  alt="Cover Preview" 
+                                  className="w-48 h-64 object-cover border-2 border-gray-200 rounded-lg shadow-lg"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={removeBookImage}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                            
+                            <div className="relative">
+                              <input
+                                type="file"
+                                id="book-image-upload"
+                                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
+                                onChange={handleBookImageChange}
+                                className="hidden"
+                              />
+                              <label
+                                htmlFor="book-image-upload"
+                                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+                              >
+                                <Upload className="w-5 h-5 text-blue-600" />
+                                <span className="text-gray-700">{bookImagePreview ? 'Change Cover Image' : 'Upload Cover Image'}</span>
+                              </label>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Supported formats: JPEG, PNG, GIF, WebP, SVG (Max 5MB)
+                            </p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold mb-2 text-gray-700">Book PDF File</label>
+                          <div className="space-y-3">
+                            {(bookPdfFileName || bookFormData.pdf_file) && (
+                              <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg">
+                                <BookOpen className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-sm truncate text-gray-800">{bookPdfFileName || 'Current PDF'}</p>
+                                  {bookFormData.pdf_file && !bookPdfFile && (
+                                    <a 
+                                      href={`http://localhost:3001${bookFormData.pdf_file}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-semibold"
+                                    >
+                                      View PDF →
+                                    </a>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={removeBookPdf}
+                                  className="bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 flex-shrink-0 transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                            
+                            <div className="relative">
+                              <input
+                                type="file"
+                                id="book-pdf-upload-edit"
+                                accept="application/pdf"
+                                onChange={handleBookPdfChange}
+                                className="hidden"
+                              />
+                              <label
+                                htmlFor="book-pdf-upload-edit"
+                                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg font-medium cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
+                              >
+                                <Upload className="w-5 h-5 text-purple-600" />
+                                <span className="text-gray-700">{bookPdfFileName ? 'Change PDF File' : 'Upload PDF File'}</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 pt-4 border-t border-gray-200">
+                      <button
+                        type="submit"
+                        disabled={!bookPdfFile && !editingBook}
+                        className={`flex-1 font-semibold py-4 px-8 rounded-lg transition-all shadow-lg hover:shadow-xl ${
+                          !bookPdfFile && !editingBook
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                        }`}
+                      >
+                        {editingBook ? 'Update Book' : (analyzingPdf ? 'Analyzing...' : 'Create Book')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetBookForm}
+                        className="flex-1 bg-white text-gray-700 font-semibold py-4 px-8 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
+                      >
+                        Cancel
+                      </button>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700">Description</label>
-                    <textarea
-                      value={bookFormData.description}
-                      onChange={(e) => setBookFormData({ ...bookFormData, description: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow h-32 resize-none"
-                      placeholder="Brief description of the book..."
-                    />
-                  </div>
-
-                  <div className="flex gap-4 pt-4 border-t border-gray-200">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-8 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
-                    >
-                      {editingBook ? 'Update Book' : 'Create Book'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetBookForm}
-                      className="flex-1 bg-white text-gray-700 font-semibold py-3 px-8 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
-            </div>
             )}
 
             {/* Character Detail View Modal */}
