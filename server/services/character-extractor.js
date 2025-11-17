@@ -139,7 +139,7 @@ JSON Array:`;
         const retryDelay = error.errorDetails?.find(d => d['@type']?.includes('RetryInfo'))?.retryDelay;
         const delaySeconds = retryDelay ? parseInt(retryDelay) : Math.pow(2, attempt) * 5;
         
-        console.warn(`⚠️ Rate limit hit (attempt ${attempt}/${maxRetries}). Retrying in ${delaySeconds} seconds...`);
+        console.warn(`Rate limit hit (attempt ${attempt}/${maxRetries}). Retrying in ${delaySeconds} seconds...`);
         
         if (attempt < maxRetries) {
           await sleep(delaySeconds * 1000);
@@ -148,7 +148,7 @@ JSON Array:`;
       }
       
       // For non-rate-limit errors, fail immediately
-      console.error(`❌ Character extraction failed:`, error.message);
+      console.error(`Character extraction failed:`, error.message);
       const updateStmt = db.prepare('UPDATE books SET processing_status = ?, error_message = ? WHERE id = ?');
       updateStmt.run('error', error.message, bookId);
       throw error;

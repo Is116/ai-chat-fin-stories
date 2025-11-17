@@ -29,31 +29,31 @@ A full-stack web application that allows users to upload books, extract characte
 
 ---
 
-## ✨ Features
+## Features
 
 ### Core Features
-- 📖 **PDF Book Upload** - Upload books in PDF format
-- 🤖 **AI Character Extraction** - Automatically extract main characters using Google Gemini AI
-- 💬 **Character Chat** - Have conversations with book characters
-- 🎭 **Opinionated Personalities** - Characters express strong opinions and emotions
-- 🌍 **Multilingual Support** - Chat in English, Sinhala, Finnish, and more
-- 🔐 **User Authentication** - Local and Google OAuth login
-- 👨‍💼 **Admin Dashboard** - Manage books, characters, and users
-- 🎨 **Auto-Generated Book Covers** - AI creates beautiful cover images
-- 🖼️ **Character Avatars** - Auto-generated unique avatars using DiceBear API
-- 📊 **Book Metadata Extraction** - AI extracts title, author, genre, year, description, language
+- **PDF Book Upload** - Upload books in PDF format
+- **AI Character Extraction** - Automatically extract main characters using Google Gemini AI
+- **Character Chat** - Have conversations with book characters
+- **Opinionated Personalities** - Characters express strong opinions and emotions
+- **Multilingual Support** - Chat in English, Sinhala, Finnish, and more
+- **User Authentication** - Local and Google OAuth login
+- **Admin Dashboard** - Manage books, characters, and users
+- **Auto-Generated Book Covers** - AI creates beautiful cover images
+- **Character Avatars** - Auto-generated unique avatars using DiceBear API
+- **Book Metadata Extraction** - AI extracts title, author, genre, year, description, language
 
 ### Advanced Features
-- 🧠 **RAG (Retrieval Augmented Generation)** - Context-aware responses using book chunks
-- 🎯 **Character Personas** - Deep personality analysis and authentic voices
-- 📸 **Image Chat Support** - Upload images for character analysis
-- 🔄 **Conversation History** - Persistent chat history
-- 🌐 **Responsive Design** - Mobile-friendly interface
-- 🎨 **Beautiful UI** - Gradient backgrounds, animations, modern design
+- **RAG (Retrieval Augmented Generation)** - Context-aware responses using book chunks
+- **Character Personas** - Deep personality analysis and authentic voices
+- **Image Chat Support** - Upload images for character analysis
+- **Conversation History** - Persistent chat history
+- **Responsive Design** - Mobile-friendly interface
+- **Beautiful UI** - Gradient backgrounds, animations, modern design
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 18.2** - UI library
@@ -210,7 +210,7 @@ ai-chat-fin-stories/
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 ### Frontend Dependencies
 
@@ -271,7 +271,7 @@ ai-chat-fin-stories/
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 
@@ -342,7 +342,7 @@ See `GOOGLE_LOGIN_README.md` for detailed instructions.
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Database Configuration
 
@@ -368,7 +368,7 @@ Default admin credentials:
 - **Username**: `admin`
 - **Password**: `admin123`
 
-⚠️ **Change these immediately in production!**
+**Change these immediately in production!**
 
 ### File Upload Limits
 
@@ -428,7 +428,7 @@ npm run server
 
 ---
 
-## 📡 API Documentation
+## API Documentation
 
 ### Authentication Endpoints
 
@@ -747,7 +747,7 @@ Users with same email across providers are automatically linked.
 
 ---
 
-## 👨‍💼 Admin Panel
+## Admin Panel
 
 ### Access
 
@@ -795,7 +795,7 @@ router.use((req, res, next) => {
 
 ---
 
-## 📤 File Uploads
+## File Uploads
 
 ### Book Covers
 
@@ -829,7 +829,7 @@ fileFilter: PDF only for books
 
 ---
 
-## 🎨 UI Components
+## UI Components
 
 ### Design System
 
@@ -875,7 +875,7 @@ node server/reset-adminuser-password.js
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -901,7 +901,7 @@ node server/reset-adminuser-password.js
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Checklist
 
@@ -926,7 +926,7 @@ GOOGLE_CALLBACK_URL=https://yourdomain.com/api/auth/google/callback
 
 ---
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file for details
 
@@ -942,7 +942,7 @@ MIT License - see LICENSE file for details
 
 ---
 
-## 📧 Support
+## Support
 
 For issues and questions:
 - **GitHub Issues**: https://github.com/Is116/ai-chat-fin-stories/issues
@@ -950,7 +950,7 @@ For issues and questions:
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Google Gemini AI for powerful language models
 - DiceBear for avatar generation
@@ -959,14 +959,12 @@ For issues and questions:
 
 ---
 
-**Built with ❤️ using React, Node.js, and Google Gemini AI
+**Built with using React, Node.js, and Google Gemini AI
   book: "Book Title",
   author: "Author Name",
   personality: "Character description and speaking style...",
-  avatar: "🎭",
+  avatar: "",
   greeting: "Character's greeting message"
-}
-```
 
 ## API Information
 
