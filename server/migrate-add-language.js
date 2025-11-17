@@ -1,10 +1,6 @@
-/**
- * Migration: Add language column to books table
- */
-
 const db = require('./database');
 
-console.log('🔄 Adding language column to books table...');
+console.log('Adding language column to books table...');
 
 try {
   // Add language column
@@ -12,14 +8,14 @@ try {
     ALTER TABLE books ADD COLUMN language TEXT DEFAULT 'English';
   `);
   
-  console.log('✅ Migration completed successfully!');
+  console.log('Migration completed successfully!');
   console.log('   - Added "language" column to books table');
   
 } catch (error) {
   if (error.message.includes('duplicate column name')) {
-    console.log('ℹ️  Column already exists, skipping migration');
+    console.log('ℹColumn already exists, skipping migration');
   } else {
-    console.error('❌ Migration failed:', error.message);
+    console.error('Migration failed:', error.message);
     process.exit(1);
   }
 }

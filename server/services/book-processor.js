@@ -1,8 +1,3 @@
-/**
- * Book Processing Service - CommonJS Version
- * Phase 1: Data Ingestion and Preparation
- */
-
 const { PDFParse } = require('pdf-parse');
 const fs = require('fs').promises;
 const path = require('path');
@@ -11,9 +6,7 @@ const db = require('../database');
 const MAX_CHUNK_SIZE = parseInt(process.env.MAX_CHUNK_SIZE) || 1000;
 const CHUNK_OVERLAP = parseInt(process.env.CHUNK_OVERLAP) || 100;
 
-/**
- * Extract text from PDF file
- */
+
 async function extractTextFromPDF(pdfPath) {
   try {
     const dataBuffer = await fs.readFile(pdfPath);
@@ -26,9 +19,7 @@ async function extractTextFromPDF(pdfPath) {
   }
 }
 
-/**
- * Extract text from plain text file
- */
+
 async function extractTextFromFile(filePath) {
   try {
     return await fs.readFile(filePath, 'utf-8');
@@ -37,9 +28,7 @@ async function extractTextFromFile(filePath) {
   }
 }
 
-/**
- * Detect and extract chapters from text
- */
+
 function detectChapters(text) {
   const chapterPatterns = [
     /Chapter\s+(\d+|[IVXLCDM]+)/gi,
@@ -82,9 +71,7 @@ function detectChapters(text) {
   }];
 }
 
-/**
- * Split text into chunks with overlap
- */
+
 function chunkText(text, chapterNumber, maxChunkSize = MAX_CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
   const words = text.split(/\s+/);
   const chunks = [];
@@ -108,9 +95,7 @@ function chunkText(text, chapterNumber, maxChunkSize = MAX_CHUNK_SIZE, overlap =
   return chunks;
 }
 
-/**
- * Process a book file and store chunks in database
- */
+
 async function processBook(bookId, filePath) {
   try {
     const updateStmt = db.prepare('UPDATE books SET processing_status = ? WHERE id = ?');
@@ -165,17 +150,13 @@ async function processBook(bookId, filePath) {
   }
 }
 
-/**
- * Get all chunks for a book
- */
+
 function getBookChunks(bookId) {
   const stmt = db.prepare('SELECT * FROM book_chunks WHERE book_id = ? ORDER BY chapter_number, chunk_index');
   return stmt.all(bookId);
 }
 
-/**
- * Get full text of a book (reconstructed from chunks)
- */
+
 function getBookFullText(bookId) {
   const chunks = getBookChunks(bookId);
   return chunks.map(chunk => chunk.chunk_text).join('\n\n');

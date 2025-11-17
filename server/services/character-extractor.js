@@ -1,24 +1,15 @@
-/**
- * Character Extraction Service - CommonJS Version
- * Phase 2: Automatic Character Identification & Profiling
- */
-
 const { getGeminiAI, MODELS, PRECISE_GENERATION_CONFIG } = require('../config/google-cloud');
 const { getBookFullText } = require('./book-processor');
 const db = require('../database');
 
 const MAX_CHARACTERS = parseInt(process.env.MAX_CHARACTERS_TO_EXTRACT) || 10;
 
-/**
- * Sleep helper for retry delays
- */
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Extract characters from book using Gemini API with retry logic
- */
+
 async function extractCharactersFromBook(bookId) {
   const maxRetries = 3;
   let lastError;
@@ -170,17 +161,13 @@ JSON Array:`;
   throw lastError || new Error('Failed to extract characters after multiple retries');
 }
 
-/**
- * Get extracted characters for a book
- */
+
 function getExtractedCharacters(bookId) {
   const stmt = db.prepare('SELECT * FROM extracted_characters WHERE book_id = ? ORDER BY mention_count DESC');
   return stmt.all(bookId);
 }
 
-/**
- * Approve extracted character (create actual character entry)
- */
+
 function approveExtractedCharacter(extractedCharacterId, additionalData = {}) {
   const stmt = db.prepare('SELECT * FROM extracted_characters WHERE id = ?');
   const extracted = stmt.get(extractedCharacterId);

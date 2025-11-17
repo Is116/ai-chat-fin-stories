@@ -180,10 +180,10 @@ const AdminDashboard = ({ admin, onLogout }) => {
     e.preventDefault();
     const token = localStorage.getItem('adminToken');
 
-    console.log('🔍 DEBUG - handleBookSubmit called');
-    console.log('📝 bookFormData:', bookFormData);
-    console.log('🖼️  bookImageFile:', bookImageFile);
-    console.log('📄 bookPdfFile:', bookPdfFile);
+    console.log('DEBUG - handleBookSubmit called');
+    console.log('bookFormData:', bookFormData);
+    console.log('bookImageFile:', bookImageFile);
+    console.log('bookPdfFile:', bookPdfFile);
 
     try {
       const url = editingBook
@@ -205,17 +205,17 @@ const AdminDashboard = ({ admin, onLogout }) => {
         
         // Include AI-generated cover_image path if available (and no manual image uploaded)
         if (!bookImageFile && bookFormData.cover_image) {
-          console.log('✅ Adding AI-generated cover_image to FormData:', bookFormData.cover_image);
+          console.log('Adding AI-generated cover_image to FormData:', bookFormData.cover_image);
           formData.append('cover_image', bookFormData.cover_image);
         }
         
         if (bookImageFile) {
-          console.log('✅ Adding uploaded image file to FormData');
+          console.log('Adding uploaded image file to FormData');
           formData.append('cover_image', bookImageFile);
         }
         
         if (bookPdfFile) {
-          console.log('✅ Adding PDF file to FormData');
+          console.log('Adding PDF file to FormData');
           formData.append('pdf_file', bookPdfFile);
         }
 
@@ -228,7 +228,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
         });
       } else {
         // No files, use JSON
-        console.log('📤 Sending book data as JSON:', bookFormData);
+        console.log('Sending book data as JSON:', bookFormData);
         response = await fetch(url, {
           method,
           headers: {
@@ -411,15 +411,15 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
       const result = await response.json();
       
-      console.log('✅ Characters generated:', result);
+      console.log('Characters generated:', result);
 
       // Refresh data
       await fetchBooks();
       await fetchCharacters();
 
-      alert(`✅ Success! Generated ${result.characters.length} characters:\n${result.characters.map(c => `• ${c.name}`).join('\n')}\n\nYou can now chat with them!`);
+      alert(`Success! Generated ${result.characters.length} characters:\n${result.characters.map(c => `• ${c.name}`).join('\n')}\n\nYou can now chat with them!`);
     } catch (error) {
-      console.error('❌ Error generating characters:', error);
+      console.error('Error generating characters:', error);
       alert(`Failed to generate characters: ${error.message}`);
     } finally {
       // Remove book from generating set
@@ -475,9 +475,9 @@ const AdminDashboard = ({ admin, onLogout }) => {
       await fetchCharacters();
 
       if (failedCount === 0) {
-        alert(`✅ Successfully deleted all ${deletedCount} character(s) from "${bookTitle}"`);
+        alert(`Successfully deleted all ${deletedCount} character(s) from "${bookTitle}"`);
       } else {
-        alert(`⚠️ Deleted ${deletedCount} character(s), but ${failedCount} failed. Check console for details.`);
+        alert(`Deleted ${deletedCount} character(s), but ${failedCount} failed. Check console for details.`);
       }
     } catch (error) {
       console.error('Error deleting characters:', error);
@@ -759,7 +759,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
       const result = await response.json();
       
-      console.log('📚 AI Analysis Result:', result);
+      console.log('AI Analysis Result:', result);
       
       // Auto-fill the form with AI-extracted data INCLUDING cover image
       setBookFormData({
@@ -774,11 +774,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
       // If a cover image was generated, show it in the preview
       if (result.cover_image) {
         setBookImagePreview(`http://localhost:3001${result.cover_image}`);
-        console.log('✅ Cover image set:', result.cover_image);
+        console.log('Cover image set:', result.cover_image);
       }
 
-      alert('✅ Book information extracted successfully!\n' + 
-            (result.cover_image ? '📚 Cover image generated automatically!' : '') +
+      alert('Book information extracted successfully!\n' + 
+            (result.cover_image ? 'Cover image generated automatically!' : '') +
             '\n\nReview and edit if needed, then click Save.');
     } catch (error) {
       console.error('Error analyzing PDF:', error);

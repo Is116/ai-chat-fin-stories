@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-/**
- * OAuth Callback Handler Component
- * Handles the redirect from social login providers
- */
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -25,7 +21,7 @@ const AuthCallback = () => {
       localStorage.setItem('token', token);
       
       // Show success message
-      console.log(`✅ Logged in successfully with ${provider}`);
+      console.log(`Logged in successfully with ${provider}`);
       
       // Redirect to home page
       navigate('/', { replace: true });

@@ -5,9 +5,6 @@ const path = require('path');
 
 const dbPath = path.join(__dirname, '../literary-chat.db');
 
-/**
- * Configure Passport.js with social login strategies
- */
 function configurePassport() {
   // Serialize user for session
   passport.serializeUser((user, done) => {

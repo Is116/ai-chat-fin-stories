@@ -6,9 +6,7 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-/**
- * Helper function to generate JWT token
- */
+
 function generateToken(user) {
   return jwt.sign(
     {

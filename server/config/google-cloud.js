@@ -1,8 +1,3 @@
-/**
- * Google Cloud Configuration
- * Handles initialization of Vertex AI and Gemini API clients
- */
-
 const { VertexAI } = require('@google-cloud/vertexai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -52,9 +47,9 @@ const getGeminiAI = () => {
 
 // Model configurations
 const MODELS = {
-  GEMINI_PRO: 'gemini-2.5-flash', // Stable model (free tier available)
-  GEMINI_FLASH: 'gemini-2.5-flash', // Fast responses
-  EMBEDDING: 'text-embedding-004', // For vector embeddings
+  GEMINI_PRO: 'gemini-2.5-flash', 
+  GEMINI_FLASH: 'gemini-2.5-flash',
+  EMBEDDING: 'text-embedding-004',
 };
 
 // Generation configuration

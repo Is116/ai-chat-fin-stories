@@ -68,23 +68,6 @@ require('./seed');
 // Start server
 app.listen(PORT, () => {
   console.log(`
-╔═══════════════════════════════════════════════╗
-║   🚀 Literary Chat API Server Running        ║
-║                                               ║
-║   Port: ${PORT}                                  ║
-║   Database: SQLite                            ║
-║                                               ║
-║   Default Admin Credentials:                  ║
-║   Username: admin                             ║
-║   Password: admin123                          ║
-║                                               ║
-║   API Endpoints:                              ║
-║   POST   /api/auth/login                      ║
-║   GET    /api/auth/verify                     ║
-║   GET    /api/characters                      ║
-║   POST   /api/characters (protected)          ║
-║   PUT    /api/characters/:id (protected)      ║
-║   DELETE /api/characters/:id (protected)      ║
-╚═══════════════════════════════════════════════╝
+║   Port: ${PORT}                               
   `);
 });

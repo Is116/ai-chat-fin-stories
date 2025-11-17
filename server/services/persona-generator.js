@@ -1,22 +1,13 @@
-/**
- * Character Persona Generator Service - CommonJS
- * Phase 2: Generate detailed character personas using Gemini API
- */
-
 const { getGeminiAI, MODELS, CREATIVE_GENERATION_CONFIG } = require('../config/google-cloud');
 const { getBookChunks } = require('./book-processor');
 const db = require('../database');
 
-/**
- * Sleep helper for retry delays
- */
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Generate persona for a character with retry logic
- */
+
 async function generateCharacterPersona(characterId) {
   const maxRetries = 3;
   let lastError;
@@ -53,13 +44,24 @@ You are a literary character analysis expert. Create a detailed persona profile 
 
 Analyze the following text excerpts where this character appears and create a comprehensive persona profile.
 
+FOCUS ON CREATING AN OPINIONATED CHARACTER:
+- Identify their STRONG BELIEFS and CONVICTIONS
+- Note what they LOVE and HATE
+- Capture their BIASES and PREJUDICES
+- Highlight their PASSIONATE viewpoints
+- Document their CONTROVERSIAL opinions
+- Record their MORAL STANCES
+- Identify topics they get EMOTIONAL about
+- Note their ARGUMENTATIVE tendencies
+- Capture their JUDGMENTS about other characters
+
 Instructions:
 1. Analyze the character's personality, behavior, speech patterns, and relationships
 2. Create a detailed JSON profile with the following structure:
 
 {
   "personality_traits": ["trait1", "trait2", "trait3", "trait4", "trait5"],
-  "speaking_style": "Detailed description of how they speak (tone, vocabulary, typical phrases, formality level)",
+  "speaking_style": "Detailed description of how they speak (tone, vocabulary, typical phrases, formality level, emotional intensity)",
   "key_motivation": "Their primary goal, desire, or driving force in the story",
   "background": "Brief background information (who they are, their role, their circumstances)",
   "relationships": [
@@ -67,10 +69,14 @@ Instructions:
     {"character": "Character Name", "relationship": "description of relationship"}
   ],
   "typical_phrases": ["phrase1", "phrase2", "phrase3"],
-  "worldview": "Their perspective on life, values, beliefs",
-  "emotional_range": "Description of their emotional expressions and range",
+  "worldview": "Their perspective on life, values, beliefs - be specific about their opinions",
+  "emotional_range": "Description of their emotional expressions and range - especially strong emotions",
   "strengths": ["strength1", "strength2", "strength3"],
-  "weaknesses": ["weakness1", "weakness2", "weakness3"]
+  "weaknesses": ["weakness1", "weakness2", "weakness3"],
+  "strong_opinions": ["opinion1", "opinion2", "opinion3", "opinion4", "opinion5"],
+  "pet_peeves": ["thing they hate", "thing that annoys them", "thing they despise"],
+  "passionate_about": ["thing they love", "cause they support", "value they cherish"],
+  "controversial_views": ["controversial stance 1", "controversial stance 2"]
 }
 
 Character Name: ${character.name}
@@ -107,7 +113,7 @@ Return ONLY valid JSON:`;
         systemInstruction
       );
 
-      console.log(`✅ Generated persona for character ${characterId} (${character.name})`);
+      console.log(`Generated persona for character ${characterId} (${character.name})`);
 
       return {
         success: true,
@@ -125,7 +131,7 @@ Return ONLY valid JSON:`;
         const retryDelay = error.errorDetails?.find(d => d['@type']?.includes('RetryInfo'))?.retryDelay;
         const delaySeconds = retryDelay ? parseInt(retryDelay) : Math.pow(2, attempt) * 5;
         
-        console.warn(`⚠️ Rate limit hit for ${character.name} (attempt ${attempt}/${maxRetries}). Retrying in ${delaySeconds} seconds...`);
+        console.warn(`Rate limit hit for ${character.name} (attempt ${attempt}/${maxRetries}). Retrying in ${delaySeconds} seconds...`);
         
         if (attempt < maxRetries) {
           await sleep(delaySeconds * 1000);
@@ -134,7 +140,7 @@ Return ONLY valid JSON:`;
       }
       
       // For non-rate-limit errors, fail immediately
-      console.error(`❌ Failed to generate persona for character ${characterId}:`, error.message);
+      console.error(`Failed to generate persona for character ${characterId}:`, error.message);
       throw error;
     }
   }
@@ -143,9 +149,7 @@ Return ONLY valid JSON:`;
   throw lastError || new Error(`Failed to generate persona after ${maxRetries} attempts`);
 }
 
-/**
- * Generate system instruction for AI chatbot
- */
+
 function generateSystemInstruction(character, book, personaData) {
   const instruction = `You are ${character.name} from the book "${book.title}"${book.author ? ` by ${book.author}` : ''}.
 
@@ -161,8 +165,24 @@ ${personaData.speaking_style}
 KEY MOTIVATION:
 ${personaData.key_motivation}
 
-WORLDVIEW:
+WORLDVIEW & BELIEFS:
 ${personaData.worldview}
+
+${personaData.strong_opinions ? `STRONG OPINIONS YOU HOLD:
+${personaData.strong_opinions.map(op => `- ${op}`).join('\n')}
+` : ''}
+
+${personaData.passionate_about ? `WHAT YOU'RE PASSIONATE ABOUT:
+${personaData.passionate_about.map(p => `- ${p}`).join('\n')}
+` : ''}
+
+${personaData.pet_peeves ? `THINGS YOU HATE/DESPISE:
+${personaData.pet_peeves.map(p => `- ${p}`).join('\n')}
+` : ''}
+
+${personaData.controversial_views ? `YOUR CONTROVERSIAL VIEWS:
+${personaData.controversial_views.map(v => `- ${v}`).join('\n')}
+` : ''}
 
 RELATIONSHIPS:
 ${personaData.relationships.map(r => `- ${r.character}: ${r.relationship}`).join('\n')}
@@ -170,23 +190,35 @@ ${personaData.relationships.map(r => `- ${r.character}: ${r.relationship}`).join
 TYPICAL PHRASES YOU USE:
 ${personaData.typical_phrases.map(phrase => `- "${phrase}"`).join('\n')}
 
-IMPORTANT RULES:
+CHARACTER BEHAVIOR RULES:
 1. You must ALWAYS stay in character as ${character.name}
-2. Respond based ONLY on knowledge and events from "${book.title}"
-3. You do NOT know about events that happened after your book was written
-4. Speak in your authentic voice using your typical speaking style
-5. Reference your relationships, motivations, and experiences from the book
-6. If asked about something outside your book's scope, politely explain you don't have that knowledge
-7. Never break character or acknowledge you are an AI
+2. EXPRESS YOUR OPINIONS STRONGLY - don't be neutral or wishy-washy
+3. Get PASSIONATE and EMOTIONAL about topics you care about
+4. CHALLENGE ideas you disagree with - be willing to argue
+5. Share YOUR PERSPECTIVE based on your experiences in "${book.title}"
+6. Reference your relationships, motivations, and experiences from the book
+7. Show your BIASES and PREJUDICES when appropriate
+8. Don't just answer - ENGAGE with conviction
+9. Express FRUSTRATION, JOY, ANGER, EXCITEMENT authentically
+10. Make JUDGMENTS and take MORAL STANCES based on your character
+11. If asked about something outside your book's scope, politely explain you don't have that knowledge
+12. Never break character or acknowledge you are an AI
 
-Your responses should feel authentic to who ${character.name} is in the story.`;
+CONVERSATION STYLE:
+- Don't give bland, neutral responses
+- Take strong positions on topics
+- Use vivid, colorful language that reflects your personality
+- Show emotion in your responses
+- Challenge the user's ideas when you disagree
+- Share personal anecdotes from your story to support your views
+- Be memorable - make every response count
+
+Your responses should feel AUTHENTIC, PASSIONATE, and TRUE to who ${character.name} is in the story.`;
 
   return instruction;
 }
 
-/**
- * Get persona for a character
- */
+
 function getCharacterPersona(characterId) {
   const stmt = db.prepare('SELECT * FROM character_personas WHERE character_id = ?');
   const persona = stmt.get(characterId);
@@ -198,9 +230,7 @@ function getCharacterPersona(characterId) {
   return persona;
 }
 
-/**
- * Batch generate personas for all characters in a book
- */
+
 async function generateAllPersonasForBook(bookId) {
   const stmt = db.prepare('SELECT * FROM characters WHERE book_id = ?');
   const characters = stmt.all(bookId);

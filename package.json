@@ -1,7 +1,7 @@
 {
   "name": "book-character-chat",
   "version": "1.0.0",
-  "description": "Chat with famous book characters powered by Claude AI",
+  "description": "Chat with famous book characters powered by Gimini AI",
   "private": true,
   "dependencies": {
     "@google-cloud/aiplatform": "^5.13.0",

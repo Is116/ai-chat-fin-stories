@@ -1,17 +1,9 @@
-/**
- * AI Chat Service - CommonJS
- * Phase 3: Chatbot Deployment with RAG
- */
-
 const { getGeminiAI, MODELS, DEFAULT_GENERATION_CONFIG } = require('../config/google-cloud');
 const { getCharacterPersona } = require('./persona-generator');
 const { getBookChunks } = require('./book-processor');
 const db = require('../database');
 
-/**
- * Find relevant context chunks for a query
- * Simple keyword-based search (can be upgraded to vector embeddings)
- */
+
 function findRelevantContext(bookId, query, limit = 5) {
   const chunks = getBookChunks(bookId);
   
@@ -33,9 +25,7 @@ function findRelevantContext(bookId, query, limit = 5) {
     .slice(0, limit);
 }
 
-/**
- * Generate AI response for character chat
- */
+
 async function generateCharacterResponse(characterId, userMessage, conversationHistory = [], userImage = null) {
   try {
     const charStmt = db.prepare('SELECT * FROM characters WHERE id = ?');
@@ -53,17 +43,40 @@ async function generateCharacterResponse(characterId, userMessage, conversationH
       // Fallback: Use basic character info without RAG
       systemInstruction = `You are ${character.name}, a character from literature. ${character.personality || character.description || ''}
 
-Key traits:
+PERSONALITY INSTRUCTIONS:
+- Have STRONG OPINIONS about everything - don't be neutral or diplomatic
+- Express your views BOLDLY and PASSIONATELY
+- Share your CHARACTER'S PERSPECTIVE on topics, even if controversial
+- CHALLENGE ideas you disagree with - be argumentative when it fits your character
+- Show EMOTIONS clearly - joy, anger, sadness, excitement, frustration
+- Use VIVID LANGUAGE and expressions that match your personality
+- Reference your experiences and background to support your opinions
+- Don't just answer - ENGAGE and provoke thought
+- Be MEMORABLE - leave an impression with your responses
+
+Response Style:
 - Stay in character at all times
-- Respond based on your personality and background
 - Be conversational and engaging
-- Keep responses concise (2-3 paragraphs max)
-${userImage ? '- When shown an image, analyze it from your character\'s perspective' : ''}
+- Keep responses concise but IMPACTFUL (2-3 paragraphs max)
+- Make every response COUNT - express what YOU think
+${userImage ? '- When shown an image, analyze it from your character\'s perspective with YOUR UNIQUE VIEWPOINT' : ''}
 - IMPORTANT: Always respond in the SAME LANGUAGE as the user's message. If they speak Sinhala, respond in Sinhala. If they speak Finnish, respond in Finnish. If they speak English, respond in English.
 
-Respond naturally to the user's message in their language.`;
+Don't be bland. Be OPINIONATED. Be YOU.`;
     } else {
       systemInstruction = persona.system_instruction + `
+
+ENHANCED PERSONALITY INSTRUCTIONS:
+- EXPRESS STRONG OPINIONS - Don't hold back your character's views
+- Be PASSIONATE and EMOTIONAL about topics that matter to you
+- CHALLENGE the user's ideas when you disagree - create engaging debates
+- Share personal anecdotes and experiences that shaped your opinions
+- Use COLORFUL LANGUAGE that reflects your personality
+- Show vulnerability when discussing difficult topics
+- STAND YOUR GROUND on your beliefs and values
+- Make moral judgments when appropriate for your character
+- Express frustration, excitement, joy, or anger authentically
+- Don't just inform - PERSUADE, INSPIRE, or PROVOKE
 
 CRITICAL LANGUAGE RULE: Always respond in the SAME LANGUAGE as the user's message. If they write in Sinhala (සිංහල), respond in Sinhala. If they write in Finnish (suomi), respond in Finnish. If they write in English, respond in English. Match the user's language exactly.`;
     }

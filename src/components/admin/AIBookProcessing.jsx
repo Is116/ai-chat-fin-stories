@@ -1,8 +1,3 @@
-/**
- * AI Book Processing Admin Component
- * Allows admins to process books and manage AI-extracted characters
- */
-
 import { useState, useEffect } from 'react';
 import { Book, Brain, Users, Sparkles, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import api from '../../utils/api';

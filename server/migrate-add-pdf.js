@@ -11,13 +11,13 @@ try {
   const hasPdfColumn = tableInfo.some(col => col.name === 'pdf_file');
   
   if (hasPdfColumn) {
-    console.log('✅ PDF column already exists');
+    console.log('PDF column already exists');
   } else {
     // Add pdf_file column to books table
     db.exec(`
       ALTER TABLE books ADD COLUMN pdf_file TEXT;
     `);
-    console.log('✅ PDF column added successfully');
+    console.log('PDF column added successfully');
   }
   
   // Verify the change
@@ -27,9 +27,9 @@ try {
     console.log(`  - ${col.name}: ${col.type}${col.notnull ? ' NOT NULL' : ''}`);
   });
   
-  console.log('\n✅ Migration completed successfully!');
+  console.log('\n Migration completed successfully!');
 } catch (error) {
-  console.error('❌ Migration failed:', error);
+  console.error('Migration failed:', error);
   process.exit(1);
 }
 

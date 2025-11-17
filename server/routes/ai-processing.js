@@ -1,8 +1,3 @@
-/**
- * AI Processing Routes - CommonJS
- * Admin API endpoints for automated book processing
- */
-
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const https = require('https');
@@ -48,10 +43,7 @@ const verifyAdmin = (req, res, next) => {
   }
 };
 
-/**
- * Download character image from DiceBear API (generates unique avatars)
- * Falls back to UI Avatars if needed
- */
+
 async function downloadCharacterImage(characterName, bookTitle) {
   try {
     // Use DiceBear API for consistent, unique character avatars
@@ -136,11 +128,7 @@ async function downloadCharacterImage(characterName, bookTitle) {
   }
 }
 
-/**
- * POST /api/ai-processing/analyze-book-metadata
- * Analyze uploaded PDF and extract book metadata using AI
- * Also extracts first page as cover image
- */
+
 router.post('/analyze-book-metadata', verifyAdmin, upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
@@ -162,7 +150,7 @@ router.post('/analyze-book-metadata', verifyAdmin, upload.single('pdf'), async (
       return res.status(400).json({ error: 'No text found in PDF' });
     }
 
-    console.log(`✅ Extracted ${bookText.length} characters from PDF`);
+    console.log(`Extracted ${bookText.length} characters from PDF`);
 
     // Use first 3000 characters for metadata analysis
     const sampleText = bookText.substring(0, 3000);
@@ -205,7 +193,7 @@ ${sampleText}
 
 Return only the JSON object, no other text. NEVER use null for any field.`;
 
-    console.log('🤖 Calling AI to extract metadata...');
+    console.log('Calling AI to extract metadata...');
     const aiResult = await model.generateContent(prompt);
     const responseText = aiResult.response.text();
     
@@ -216,7 +204,7 @@ Return only the JSON object, no other text. NEVER use null for any field.`;
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     
     if (!jsonMatch) {
-      console.error('❌ No JSON found in AI response');
+      console.error('No JSON found in AI response');
       return res.status(500).json({ error: 'Failed to extract metadata from AI response' });
     }
 
@@ -269,16 +257,16 @@ Return only the JSON object, no other text. NEVER use null for any field.`;
     metadata.published_year = metadata.published_year || new Date().getFullYear();
     metadata.language = detectedLanguage;
     
-    console.log('✅ Extracted metadata:', metadata);
+    console.log('Extracted metadata:', metadata);
 
     // Generate book cover with title and author
-    console.log('🎨 Creating book cover image...');
+    console.log('Creating book cover image...');
     const coverUrl = await generateBookCoverFromPdf(req.file.buffer, metadata.title, metadata.author);
     
     if (coverUrl) {
-      console.log('✅ Cover image created successfully:', coverUrl);
+      console.log('Cover image created successfully:', coverUrl);
     } else {
-      console.log('⚠️  Cover creation failed, book will have no cover');
+      console.log('Cover creation failed, book will have no cover');
     }
 
     // Return the extracted metadata with cover image
@@ -295,14 +283,13 @@ Return only the JSON object, no other text. NEVER use null for any field.`;
     });
 
   } catch (error) {
-    console.error('❌ Error analyzing PDF metadata:', error);
+    console.error('Error analyzing PDF metadata:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * Generate a book cover image using canvas with title and author
- */
+
+
 async function generateBookCoverFromPdf(pdfBuffer, title, author) {
   try {
     const { createCanvas } = require('canvas');
@@ -400,10 +387,7 @@ async function generateBookCoverFromPdf(pdfBuffer, title, author) {
   }
 }
 
-/**
- * POST /api/ai-processing/process-and-generate/:bookId
- * Complete workflow: Process PDF, extract characters, create them in DB
- */
+
 router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -425,7 +409,7 @@ router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
     const { getGeminiAI } = require('../config/google-cloud');
 
     // Step 1: Extract text from PDF
-    console.log(`📖 Step 1: Extracting text from PDF for book ${bookId}...`);
+    console.log(`Step 1: Extracting text from PDF for book ${bookId}...`);
     const pdfPath = path.join(__dirname, '..', '..', book.pdf_file.replace('/books/pdfs/', 'public/books/pdfs/'));
     
     const bookText = await extractTextFromPDF(pdfPath);
@@ -434,10 +418,10 @@ router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
       return res.status(400).json({ error: 'No text found in PDF' });
     }
 
-    console.log(`✅ Extracted ${bookText.length} characters from PDF`);
+    console.log(`Extracted ${bookText.length} characters from PDF`);
 
     // Step 2: Use AI to extract characters
-    console.log(`🤖 Step 2: Using AI to identify characters...`);
+    console.log(`Step 2: Using AI to identify characters...`);
     const genAI = getGeminiAI();
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.5-flash',
@@ -475,7 +459,7 @@ ${sampleText}`;
     
     // Check for blocked content
     if (result.response.promptFeedback?.blockReason) {
-      console.error('❌ Content blocked:', result.response.promptFeedback.blockReason);
+      console.error('Content blocked:', result.response.promptFeedback.blockReason);
       return res.status(500).json({ 
         error: `AI blocked the request: ${result.response.promptFeedback.blockReason}` 
       });
@@ -485,7 +469,7 @@ ${sampleText}`;
     console.log('AI Response:', responseText.substring(0, 500));
     
     if (!responseText || responseText.trim().length === 0) {
-      console.error('❌ Empty response from AI');
+      console.error('Empty response from AI');
       console.error('Full response object:', JSON.stringify(result.response, null, 2));
       return res.status(500).json({ error: 'AI returned empty response' });
     }
@@ -495,16 +479,16 @@ ${sampleText}`;
     const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
     
     if (!jsonMatch) {
-      console.error('❌ No JSON array found in response');
+      console.error('No JSON array found in response');
       console.error('Full AI Response:', responseText);
       return res.status(500).json({ error: 'Failed to extract characters from AI response' });
     }
 
     const characters = JSON.parse(jsonMatch[0]);
-    console.log(`✅ AI identified ${characters.length} characters`);
+    console.log(`AI identified ${characters.length} characters`);
 
     // Step 3: Create characters in database
-    console.log(`💾 Step 3: Creating characters in database...`);
+    console.log(`Step 3: Creating characters in database...`);
     const insertStmt = db.prepare(
       `INSERT INTO characters (book_id, name, personality, color, greeting, image, created_at) 
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
@@ -534,13 +518,13 @@ ${sampleText}`;
       const char = characters[i];
       
       // Download character image
-      console.log(`📸 Downloading image for ${char.name}...`);
+      console.log(`Downloading image for ${char.name}...`);
       const imagePath = await downloadCharacterImage(char.name, book.title);
       
       if (imagePath) {
-        console.log(`✅ Image downloaded: ${imagePath}`);
+        console.log(`Image downloaded: ${imagePath}`);
       } else {
-        console.log(`⚠️ Using default image for ${char.name}`);
+        console.log(`Using default image for ${char.name}`);
       }
       
       const result = insertStmt.run(
@@ -557,7 +541,7 @@ ${sampleText}`;
         personality: char.description,
         image: imagePath || '/book.svg'
       });
-      console.log(`✅ Created character: ${char.name}`);
+      console.log(`Created character: ${char.name}`);
     }
 
     res.json({
@@ -567,15 +551,12 @@ ${sampleText}`;
     });
 
   } catch (error) {
-    console.error('❌ Error in process-and-generate:', error);
+    console.error('Error in process-and-generate:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * POST /api/ai-processing/process-book/:bookId
- * Process a book (extract text, create chunks)
- */
+
 router.post('/process-book/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -614,10 +595,7 @@ router.post('/process-book/:bookId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * POST /api/ai-processing/extract-characters/:bookId
- * Extract characters from a book using AI
- */
+
 router.post('/extract-characters/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -643,10 +621,7 @@ router.post('/extract-characters/:bookId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * GET /api/ai-processing/extracted-characters/:bookId
- * Get extracted characters for a book
- */
+
 router.get('/extracted-characters/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -660,10 +635,7 @@ router.get('/extracted-characters/:bookId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * POST /api/ai-processing/approve-character/:extractedCharacterId
- * Approve an extracted character and create character entry
- */
+
 router.post('/approve-character/:extractedCharacterId', verifyAdmin, async (req, res) => {
   try {
     const { extractedCharacterId } = req.params;
@@ -682,10 +654,7 @@ router.post('/approve-character/:extractedCharacterId', verifyAdmin, async (req,
   }
 });
 
-/**
- * POST /api/ai-processing/generate-persona/:characterId
- * Generate persona for a character
- */
+
 router.post('/generate-persona/:characterId', verifyAdmin, async (req, res) => {
   try {
     const { characterId } = req.params;
@@ -711,10 +680,7 @@ router.post('/generate-persona/:characterId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * POST /api/ai-processing/generate-all-personas/:bookId
- * Generate personas for all characters in a book
- */
+
 router.post('/generate-all-personas/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -740,10 +706,7 @@ router.post('/generate-all-personas/:bookId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * GET /api/ai-processing/persona/:characterId
- * Get persona for a character
- */
+
 router.get('/persona/:characterId', verifyAdmin, async (req, res) => {
   try {
     const { characterId } = req.params;
@@ -761,10 +724,7 @@ router.get('/persona/:characterId', verifyAdmin, async (req, res) => {
   }
 });
 
-/**
- * GET /api/ai-processing/status/:bookId
- * Get processing status for a book
- */
+
 router.get('/status/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;

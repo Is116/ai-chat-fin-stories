@@ -4,7 +4,7 @@ const path = require('path');
 const db = new Database(path.join(__dirname, 'literary-chat.db'));
 db.pragma('foreign_keys = ON');
 
-console.log('🔄 Starting database migration to add books table...\n');
+console.log('Starting database migration to add books table...\n');
 
 try {
   // Step 1: Check if books table exists
@@ -13,7 +13,7 @@ try {
   `).get();
 
   if (!tableExists) {
-    console.log('📚 Creating books table...');
+    console.log('Creating books table...');
     db.exec(`
       CREATE TABLE IF NOT EXISTS books (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,13 +27,13 @@ try {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Books table created\n');
+    console.log('Books table created\n');
   } else {
-    console.log('✅ Books table already exists\n');
+    console.log('Books table already exists\n');
   }
 
   // Step 2: Get existing characters
-  console.log('📖 Extracting books from existing characters...');
+  console.log('Extracting books from existing characters...');
   const characters = db.prepare('SELECT * FROM characters').all();
   
   if (characters.length > 0) {
@@ -54,7 +54,7 @@ try {
     console.log(`   Found ${booksMap.size} unique books\n`);
 
     // Step 3: Insert books
-    console.log('💾 Inserting books...');
+    console.log('Inserting books...');
     const insertBook = db.prepare(`
       INSERT INTO books (title, author, description, genre)
       VALUES (?, ?, ?, ?)
@@ -66,7 +66,7 @@ try {
       bookIdMap.set(key, result.lastInsertRowid);
       console.log(`   ✓ "${book.title}" by ${book.author} (ID: ${result.lastInsertRowid})`);
     }
-    console.log('✅ Books inserted\n');
+    console.log('Books inserted\n');
 
     // Step 4: Check if characters table needs migration
     const tableInfo = db.prepare('PRAGMA table_info(characters)').all();
@@ -74,7 +74,7 @@ try {
     const hasBookColumn = tableInfo.some(col => col.name === 'book');
 
     if (!hasBookId && hasBookColumn) {
-      console.log('🔄 Migrating characters table...');
+      console.log('Migrating characters table...');
       
       // Create new characters table with book_id
       db.exec(`
@@ -121,18 +121,18 @@ try {
       db.exec(`DROP TABLE characters`);
       db.exec(`ALTER TABLE characters_new RENAME TO characters`);
       
-      console.log('✅ Characters table migrated\n');
+      console.log('Characters table migrated\n');
     } else if (hasBookId) {
-      console.log('✅ Characters table already has book_id column\n');
+      console.log('Characters table already has book_id column\n');
     }
   } else {
-    console.log('⚠️  No existing characters found, skipping migration\n');
+    console.log('No existing characters found, skipping migration\n');
   }
 
-  console.log('🎉 Migration completed successfully!\n');
+  console.log('Migration completed successfully!\n');
 
 } catch (error) {
-  console.error('❌ Migration failed:', error.message);
+  console.error('Migration failed:', error.message);
   process.exit(1);
 }
 

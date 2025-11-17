@@ -9,7 +9,7 @@ const seedAdmin = () => {
     const hashedPassword = bcrypt.hashSync('admin123', 10);
     const insert = db.prepare('INSERT INTO admins (username, password, email) VALUES (?, ?, ?)');
     insert.run('admin', hashedPassword, 'admin@literarychat.com');
-    console.log('✅ Default admin user created: username=admin, password=admin123');
+    console.log('Default admin user created: username=admin, password=admin123');
   }
 };
 
@@ -21,7 +21,7 @@ const seedAdminUser = () => {
     const hashedPassword = bcrypt.hashSync('SuperAdmin123!', 10);
     const insert = db.prepare('INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)');
     insert.run('superadmin', 'superadmin@literarychat.com', hashedPassword, 'Super Administrator', 'admin');
-    console.log('✅ Admin user created in users table: username=superadmin, password=SuperAdmin123!, role=admin');
+    console.log('Admin user created in users table: username=superadmin, password=SuperAdmin123!, role=admin');
   }
 };
 
@@ -30,7 +30,7 @@ const seedCharacters = () => {
   const count = db.prepare('SELECT COUNT(*) as count FROM characters').get();
   
   if (count.count === 0) {
-    console.log('⚠️  Character seeding skipped - please add characters via admin panel after creating books');
+    console.log('Character seeding skipped - please add characters via admin panel after creating books');
     // Note: Characters now require book_id (foreign key to books table)
     // Add characters manually through the admin panel after books are created
   }
@@ -41,4 +41,4 @@ seedAdmin();
 seedAdminUser();
 seedCharacters();
 
-console.log('✅ Database initialization complete');
+console.log('Database initialization complete');
