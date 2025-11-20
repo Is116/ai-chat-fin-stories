@@ -1,9 +1,28 @@
 const { getGeminiAI, MODELS, PRECISE_GENERATION_CONFIG } = require('../config/google-cloud');
 const { getBookFullText } = require('./book-processor');
-const db = require('../database');
+const prisma = require('../database');
 
 const MAX_CHARACTERS = parseInt(process.env.MAX_CHARACTERS_TO_EXTRACT) || 10;
 
+// Get prompt from database
+async function getCharacterExtractionPrompt() {
+  try {
+    const prompt = await prisma.prompt.findFirst({
+      where: {
+        name: 'character_extraction_prompt',
+        isActive: 1
+      },
+      select: {
+        content: true
+      }
+    });
+    
+    return prompt ? prompt.content : null;
+  } catch (error) {
+    console.warn('Error fetching character extraction prompt:', error.message);
+    return null;
+  }
+}
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -16,12 +35,19 @@ async function extractCharactersFromBook(bookId) {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const updateStmt = db.prepare('UPDATE books SET processing_status = ? WHERE id = ?');
-      updateStmt.run('extracting_characters', bookId);
+      await prisma.book.update({
+        where: { id: bookId },
+        data: { processingStatus: 'extracting_characters' }
+      });
 
       const bookText = getBookFullText(bookId);
-      const bookStmt = db.prepare('SELECT * FROM books WHERE id = ?');
-      const book = bookStmt.get(bookId);
+      const book = await prisma.book.findUnique({
+        where: { id: bookId }
+      });
+
+      if (!book) {
+        throw new Error(`Book with id ${bookId} not found`);
+      }
 
       const genAI = getGeminiAI();
       const model = genAI.getGenerativeModel({ 
@@ -29,8 +55,18 @@ async function extractCharactersFromBook(bookId) {
         generationConfig: PRECISE_GENERATION_CONFIG,
       });
 
+      // Get prompt from database or use default
+      const promptTemplate = await getCharacterExtractionPrompt() || `Analyze this book and extract ALL characters. For each character, provide:
+1. Full name
+2. Role (protagonist, antagonist, supporting, minor)
+3. Brief description (personality traits, appearance, background)
+4. Key relationships with other characters
+5. Character arc or development
+
+Return as a JSON array of character objects.`;
+
       const prompt = `
-You are a literary analysis expert. Analyze the following book text and identify the main characters.
+You are a literary analysis expert. ${promptTemplate}
 
 Book Title: ${book.title}
 Author: ${book.author || 'Unknown'}
@@ -104,24 +140,28 @@ JSON Array:`;
 
       console.log(`Found ${characters.length} characters in AI response`);
 
-      const insertStmt = db.prepare(
-        'INSERT INTO extracted_characters (book_id, name, mention_count, role, brief_description, extraction_status) VALUES (?, ?, ?, ?, ?, ?)'
-      );
-
+      // Insert extracted characters
       for (const character of characters) {
-        insertStmt.run(
-          bookId,
-          character.name,
-          character.mention_count,
-          character.role,
-          character.brief_description,
-          'extracted'
-        );
+        await prisma.extractedCharacter.create({
+          data: {
+            bookId,
+            name: character.name,
+            mentionCount: character.mention_count,
+            role: character.role,
+            briefDescription: character.brief_description,
+            extractionStatus: 'extracted'
+          }
+        });
       }
 
-      updateStmt.run('characters_extracted', bookId);
-      const updateCountStmt = db.prepare('UPDATE books SET characters_extracted = ? WHERE id = ?');
-      updateCountStmt.run(characters.length, bookId);
+      // Update book status
+      await prisma.book.update({
+        where: { id: bookId },
+        data: {
+          processingStatus: 'characters_extracted',
+          charactersExtracted: characters.length
+        }
+      });
 
       console.log(`✅ Extracted ${characters.length} characters from book ${bookId}`);
 
@@ -149,50 +189,66 @@ JSON Array:`;
       
       // For non-rate-limit errors, fail immediately
       console.error(`Character extraction failed:`, error.message);
-      const updateStmt = db.prepare('UPDATE books SET processing_status = ?, error_message = ? WHERE id = ?');
-      updateStmt.run('error', error.message, bookId);
+      await prisma.book.update({
+        where: { id: bookId },
+        data: {
+          processingStatus: 'error',
+          errorMessage: error.message
+        }
+      });
       throw error;
     }
   }
   
   // If we exhausted all retries
-  const updateStmt = db.prepare('UPDATE books SET processing_status = ?, error_message = ? WHERE id = ?');
-  updateStmt.run('error', lastError?.message || 'Failed after multiple retries', bookId);
+  await prisma.book.update({
+    where: { id: bookId },
+    data: {
+      processingStatus: 'error',
+      errorMessage: lastError?.message || 'Failed after multiple retries'
+    }
+  });
   throw lastError || new Error('Failed to extract characters after multiple retries');
 }
 
 
-function getExtractedCharacters(bookId) {
-  const stmt = db.prepare('SELECT * FROM extracted_characters WHERE book_id = ? ORDER BY mention_count DESC');
-  return stmt.all(bookId);
+async function getExtractedCharacters(bookId) {
+  return await prisma.extractedCharacter.findMany({
+    where: { bookId },
+    orderBy: { mentionCount: 'desc' }
+  });
 }
 
 
-function approveExtractedCharacter(extractedCharacterId, additionalData = {}) {
-  const stmt = db.prepare('SELECT * FROM extracted_characters WHERE id = ?');
-  const extracted = stmt.get(extractedCharacterId);
+async function approveExtractedCharacter(extractedCharacterId, additionalData = {}) {
+  const extracted = await prisma.extractedCharacter.findUnique({
+    where: { id: extractedCharacterId }
+  });
 
   if (!extracted) {
     throw new Error('Extracted character not found');
   }
 
-  const insertStmt = db.prepare(
-    'INSERT INTO characters (book_id, name, description, image_url, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)'
-  );
+  // Create character
+  const character = await prisma.character.create({
+    data: {
+      bookId: extracted.bookId,
+      name: additionalData.name || extracted.name,
+      description: additionalData.description || extracted.briefDescription,
+      imageUrl: additionalData.image_url || null
+    }
+  });
 
-  const result = insertStmt.run(
-    extracted.book_id,
-    additionalData.name || extracted.name,
-    additionalData.description || extracted.brief_description,
-    additionalData.image_url || null
-  );
+  // Update extracted character status
+  await prisma.extractedCharacter.update({
+    where: { id: extractedCharacterId },
+    data: {
+      extractionStatus: 'approved',
+      characterId: character.id
+    }
+  });
 
-  const characterId = result.lastInsertRowid;
-
-  const updateStmt = db.prepare('UPDATE extracted_characters SET extraction_status = ?, character_id = ? WHERE id = ?');
-  updateStmt.run('approved', characterId, extractedCharacterId);
-
-  return characterId;
+  return character.id;
 }
 
 module.exports = {

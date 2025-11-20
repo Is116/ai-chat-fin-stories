@@ -1,102 +1,34 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { PrismaClient } = require('@prisma/client');
 
-// Create/connect to database
-const db = new Database(path.join(__dirname, 'literary-chat.db'));
+// PrismaClient singleton to avoid multiple instances
+const globalForPrisma = global;
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
+const prisma = globalForPrisma.prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+});
 
-// Create tables
-const createTables = () => {
-  // Admin users table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
-  // Regular users table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      full_name TEXT,
-      avatar TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_login DATETIME
-    )
-  `);
+// Initialize database (run migrations if needed)
+async function initializeDatabase() {
+  try {
+    // Test the connection
+    await prisma.$connect();
+    console.log('Prisma database connection established');
+  } catch (error) {
+    console.error('Database connection error:', error);
+    process.exit(1);
+  }
+}
 
-  // Books table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS books (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      author TEXT NOT NULL,
-      description TEXT,
-      cover_image TEXT,
-      published_year INTEGER,
-      genre TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+// Initialize on module load
+initializeDatabase();
 
-  // Characters table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS characters (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      book_id INTEGER NOT NULL,
-      personality TEXT NOT NULL,
-      avatar TEXT,
-      image TEXT,
-      color TEXT NOT NULL,
-      greeting TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-    )
-  `);
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+});
 
-  // Conversations table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS conversations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      character_id INTEGER NOT NULL,
-      title TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
-    )
-  `);
-
-  // Messages table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      conversation_id INTEGER NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
-      content TEXT NOT NULL,
-      image TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
-    )
-  `);
-
-  console.log('✅ Database tables created successfully');
-};
-
-// Initialize database
-createTables();
-
-module.exports = db;
+module.exports = prisma;

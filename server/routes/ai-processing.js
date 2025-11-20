@@ -9,10 +9,30 @@ const multer = require('multer');
 const { processBook } = require('../services/book-processor');
 const { extractCharactersFromBook, getExtractedCharacters, approveExtractedCharacter } = require('../services/character-extractor');
 const { generateCharacterPersona, getCharacterPersona, generateAllPersonasForBook } = require('../services/persona-generator');
-const db = require('../database');
+const prisma = require('../database');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+
+// Get prompt from database
+async function getPrompt(promptName) {
+  try {
+    const prompt = await prisma.prompt.findFirst({
+      where: { 
+        name: promptName,
+        isActive: 1
+      },
+      select: {
+        content: true
+      }
+    });
+    
+    return prompt ? prompt.content : null;
+  } catch (error) {
+    console.warn(`Error fetching prompt ${promptName}:`, error.message);
+    return null;
+  }
+}
 
 // Configure multer for PDF uploads (memory storage for analysis)
 const upload = multer({ 
@@ -166,27 +186,10 @@ router.post('/analyze-book-metadata', verifyAdmin, upload.single('pdf'), async (
       }
     });
 
-    const prompt = `Analyze this book excerpt and extract metadata. The book can be in ANY language (English, Sinhala, Finnish, Spanish, etc.). 
+    // Get prompt from database
+    const promptTemplate = await getPrompt('pdf_metadata_extraction') || `Analyze this book excerpt and extract metadata. Return JSON with: title, author, description, genre, published_year, language.`;
 
-Return ONLY a JSON object with these fields:
-
-{
-  "title": "exact book title in its original language",
-  "author": "author name in its original language", 
-  "description": "2-3 sentence description in the SAME language as the book",
-  "genre": "primary genre in English (e.g., Fiction, Mystery, Romance, Science Fiction, Fantasy, Classic Literature, etc.)",
-  "published_year": "year as number (e.g., 1897) or estimated year if exact year unknown",
-  "language": "detected language of the book (e.g., 'English', 'Sinhala', 'Finnish', 'Spanish', etc.)"
-}
-
-CRITICAL RULES - NEVER return null values:
-1. If title is not found, create a descriptive title based on the main theme/topic in the book's language
-2. If author is not found, use "Unknown Author" in the book's language (e.g., "නොදන්නා කතුවරයා" for Sinhala, "Tuntematon kirjailija" for Finnish)
-3. If published_year is not found, estimate based on writing style, language, and themes (modern books: 2000-2024, classic books: 1800-1950, contemporary: 1950-2000)
-4. Description must always be 2-3 sentences summarizing the main content IN THE BOOK'S ORIGINAL LANGUAGE
-5. Detect the language accurately - this is critical for multilingual support
-
-Important: Keep title, author, and description in the ORIGINAL LANGUAGE of the book.
+    const prompt = `${promptTemplate}
 
 Book excerpt:
 ${sampleText}
@@ -392,14 +395,15 @@ router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
     
-    const stmt = db.prepare('SELECT * FROM books WHERE id = ?');
-    const book = stmt.get(bookId);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(bookId) }
+    });
     
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    if (!book.pdf_file) {
+    if (!book.pdfFile) {
       return res.status(400).json({ error: 'Book has no PDF file' });
     }
 
@@ -410,7 +414,7 @@ router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
 
     // Step 1: Extract text from PDF
     console.log(`Step 1: Extracting text from PDF for book ${bookId}...`);
-    const pdfPath = path.join(__dirname, '..', '..', book.pdf_file.replace('/books/pdfs/', 'public/books/pdfs/'));
+    const pdfPath = path.join(__dirname, '..', '..', book.pdfFile.replace('/books/pdfs/', 'public/books/pdfs/'));
     
     const bookText = await extractTextFromPDF(pdfPath);
 
@@ -435,21 +439,12 @@ router.post('/process-and-generate/:bookId', verifyAdmin, async (req, res) => {
     // Use smaller text sample to avoid token limits
     const sampleText = bookText.substring(0, 10000);
     
-    // Detect book language
-    const bookLanguage = book.genre ? 'the original language of the book' : 'English';
+    // Get prompt from database
+    const promptTemplate = await getPrompt('quick_character_extraction') || `List the 5 main characters. Return as JSON array: [{"name":"Name","description":"Description"}]`;
     
     const prompt = `Analyze this book: "${book.title}" by ${book.author || 'Unknown'}.
 
-IMPORTANT: This book may be in ANY language (English, Sinhala, Finnish, Spanish, etc.). Identify the language and provide ALL information in that SAME language.
-
-List the 5 main characters from this book.
-
-For each character provide:
-- name: full character name (in the book's original language)
-- description: one sentence description (in the book's original language)
-
-Return as JSON array with NO other text:
-[{"name":"Character Name","description":"Description in book's language"}]
+${promptTemplate}
 
 Text sample:
 ${sampleText}`;
@@ -489,11 +484,7 @@ ${sampleText}`;
 
     // Step 3: Create characters in database
     console.log(`Step 3: Creating characters in database...`);
-    const insertStmt = db.prepare(
-      `INSERT INTO characters (book_id, name, personality, color, greeting, image, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-    );
-
+    
     const colors = ['from-blue-600 to-blue-700', 'from-purple-600 to-purple-700', 'from-green-600 to-green-700', 'from-pink-600 to-pink-700', 'from-amber-600 to-amber-700'];
     
     // Generate multilingual greetings based on the first character's description language
@@ -527,19 +518,23 @@ ${sampleText}`;
         console.log(`Using default image for ${char.name}`);
       }
       
-      const result = insertStmt.run(
-        bookId, 
-        char.name, 
-        char.description,
-        colors[i % colors.length],
-        greetings[i % greetings.length],
-        imagePath || '/book.svg' // Use downloaded image or fallback
-      );
+      const createdChar = await prisma.character.create({
+        data: {
+          bookId: parseInt(bookId),
+          name: char.name,
+          personality: char.description,
+          color: colors[i % colors.length],
+          greeting: greetings[i % greetings.length],
+          image: imagePath || '/book.svg',
+          avatar: ''
+        }
+      });
+      
       createdCharacters.push({
-        id: result.lastInsertRowid,
-        name: char.name,
-        personality: char.description,
-        image: imagePath || '/book.svg'
+        id: createdChar.id,
+        name: createdChar.name,
+        personality: createdChar.personality,
+        image: createdChar.image
       });
       console.log(`Created character: ${char.name}`);
     }
@@ -561,18 +556,19 @@ router.post('/process-book/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
     
-    const stmt = db.prepare('SELECT * FROM books WHERE id = ?');
-    const book = stmt.get(bookId);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(bookId) }
+    });
     
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    if (!book.pdf_file) {
+    if (!book.pdfFile) {
       return res.status(400).json({ error: 'Book has no PDF file' });
     }
 
-    const filePath = book.pdf_file.replace('/books/pdfs/', './public/books/pdfs/');
+    const filePath = book.pdfFile.replace('/books/pdfs/', './public/books/pdfs/');
 
     // Process book in background
     processBook(bookId, filePath)
@@ -729,31 +725,40 @@ router.get('/status/:bookId', verifyAdmin, async (req, res) => {
   try {
     const { bookId } = req.params;
     
-    const bookStmt = db.prepare('SELECT * FROM books WHERE id = ?');
-    const book = bookStmt.get(bookId);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(bookId) }
+    });
     
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    const chunksStmt = db.prepare('SELECT COUNT(*) as count FROM book_chunks WHERE book_id = ?');
-    const chunks = chunksStmt.get(bookId);
+    const chunksCount = await prisma.bookChunk.count({
+      where: { bookId: parseInt(bookId) }
+    });
 
-    const extractedStmt = db.prepare('SELECT COUNT(*) as count FROM extracted_characters WHERE book_id = ?');
-    const extractedCharacters = extractedStmt.get(bookId);
+    const extractedCount = await prisma.extractedCharacter.count({
+      where: { bookId: parseInt(bookId) }
+    });
 
-    const charactersStmt = db.prepare('SELECT c.*, cp.id as persona_id FROM characters c LEFT JOIN character_personas cp ON c.id = cp.character_id WHERE c.book_id = ?');
-    const characters = charactersStmt.all(bookId);
+    const characters = await prisma.character.findMany({
+      where: { bookId: parseInt(bookId) },
+      include: {
+        personas: {
+          select: { id: true }
+        }
+      }
+    });
 
     res.json({
       bookId,
-      status: book.processing_status,
-      totalChunks: chunks.count,
-      charactersExtracted: extractedCharacters.count,
+      status: book.processingStatus,
+      totalChunks: chunksCount,
+      charactersExtracted: extractedCount,
       charactersApproved: characters.length,
-      charactersWithPersona: characters.filter(c => c.persona_id).length,
-      errorMessage: book.error_message,
-      processedAt: book.processed_at
+      charactersWithPersona: characters.filter(c => c.personas.length > 0).length,
+      errorMessage: book.errorMessage,
+      processedAt: book.processedAt
     });
 
   } catch (error) {

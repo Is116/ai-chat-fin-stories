@@ -2,10 +2,28 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../database');
+const prisma = require('../database');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Default prompts fallback (used only when database is unavailable)
+const DEFAULT_FRONTEND_PROMPTS = {
+  frontend_character_instructions: 'IMPORTANT: Stay in character at all times. Respond as {CHARACTER_NAME} would, using their voice, mannerisms, and perspective. Reference events and people from your story naturally.',
+  frontend_image_analysis: `IMAGE ANALYSIS INSTRUCTIONS:
+- Analyze images from YOUR CHARACTER'S UNIQUE PERSPECTIVE and worldview
+- Express YOUR STRONG OPINION about what you see
+- React EMOTIONALLY and AUTHENTICALLY to images
+- Connect images to YOUR experiences, values, and beliefs
+- Make JUDGMENTS based on your character's moral compass
+- Don't just describe - INTERPRET and CRITIQUE from your viewpoint
+- Show how the image affects YOU personally
+- Compare it to things from YOUR time period and background
+- Be PASSIONATE in your reaction - love it, hate it, or feel conflicted
+- Be DETAILED - what specific elements catch your attention?`,
+  frontend_language_rule: 'CRITICAL: Always respond in the SAME LANGUAGE as the user\'s message. If they write in Sinhala (සිංහල), respond in Sinhala. If they write in Finnish (suomi), respond in Finnish. If they write in English, respond in English. Match the user\'s language EXACTLY.',
+  frontend_character_rule: 'DO NOT break character or mention that you are an AI.'
+};
 
 // Configure multer for book cover image uploads
 const imageStorage = multer.diskStorage({
@@ -123,19 +141,36 @@ const combinedUpload = multer({
 });
 
 // GET all books with character counts
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const books = db.prepare(`
-      SELECT 
-        b.*,
-        COUNT(c.id) as character_count
-      FROM books b
-      LEFT JOIN characters c ON b.id = c.book_id
-      GROUP BY b.id
-      ORDER BY b.title
-    `).all();
+    const books = await prisma.book.findMany({
+      include: {
+        _count: {
+          select: { characters: true }
+        }
+      },
+      orderBy: {
+        title: 'asc'
+      }
+    });
 
-    res.json(books);
+    // Transform to match old format with snake_case fields for frontend compatibility
+    const booksWithCount = books.map(book => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      cover_image: book.coverImage,
+      published_year: book.publishedYear,
+      genre: book.genre,
+      language: book.language,
+      pdf_file: book.pdfFile,
+      created_at: book.createdAt,
+      updated_at: book.updatedAt,
+      character_count: book._count.characters
+    }));
+
+    res.json(booksWithCount);
   } catch (error) {
     console.error('Get books error:', error);
     res.status(500).json({ error: 'Failed to fetch books' });
@@ -143,21 +178,47 @@ router.get('/', (req, res) => {
 });
 
 // GET single book with characters
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const book = db.prepare('SELECT * FROM books WHERE id = ?').get(req.params.id);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        characters: true
+      }
+    });
 
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    // Get characters for this book
-    const characters = db.prepare('SELECT * FROM characters WHERE book_id = ?').all(req.params.id);
+    // Transform to match old format with snake_case fields
+    const transformedBook = {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      cover_image: book.coverImage,
+      published_year: book.publishedYear,
+      genre: book.genre,
+      language: book.language,
+      pdf_file: book.pdfFile,
+      created_at: book.createdAt,
+      updated_at: book.updatedAt,
+      characters: book.characters.map(char => ({
+        id: char.id,
+        name: char.name,
+        book_id: char.bookId,
+        personality: char.personality,
+        avatar: char.avatar,
+        image: char.image,
+        color: char.color,
+        greeting: char.greeting,
+        created_at: char.createdAt,
+        updated_at: char.updatedAt
+      }))
+    };
 
-    res.json({
-      ...book,
-      characters
-    });
+    res.json(transformedBook);
   } catch (error) {
     console.error('Get book error:', error);
     res.status(500).json({ error: 'Failed to fetch book' });
@@ -168,9 +229,9 @@ router.get('/:id', (req, res) => {
 router.post('/', requireAdmin, combinedUpload.fields([
   { name: 'cover_image', maxCount: 1 },
   { name: 'pdf_file', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   console.log('🔥🔥🔥 POST /api/books CALLED 🔥🔥🔥');
-  const { title, author, description, published_year, genre } = req.body;
+  const { title, author, description, published_year, genre, language } = req.body;
 
   console.log('📥 Create book request body:', req.body);
   console.log('📁 Files:', req.files);
@@ -198,14 +259,18 @@ router.post('/', requireAdmin, combinedUpload.fields([
   }
 
   try {
-    const stmt = db.prepare(`
-      INSERT INTO books (title, author, description, cover_image, pdf_file, published_year, genre)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(title, author, description, cover_image, pdf_file, published_year, genre);
-
-    const newBook = db.prepare('SELECT * FROM books WHERE id = ?').get(result.lastInsertRowid);
+    const newBook = await prisma.book.create({
+      data: {
+        title,
+        author,
+        description,
+        coverImage: cover_image,
+        pdfFile: pdf_file,
+        publishedYear: published_year ? parseInt(published_year) : null,
+        genre,
+        language
+      }
+    });
 
     res.status(201).json(newBook);
   } catch (error) {
@@ -218,8 +283,8 @@ router.post('/', requireAdmin, combinedUpload.fields([
 router.put('/:id', requireAdmin, combinedUpload.fields([
   { name: 'cover_image', maxCount: 1 },
   { name: 'pdf_file', maxCount: 1 }
-]), (req, res) => {
-  const { title, author, description, published_year, genre } = req.body;
+]), async (req, res) => {
+  const { title, author, description, published_year, genre, language } = req.body;
 
   if (!title || !author) {
     return res.status(400).json({ error: 'Title and author are required' });
@@ -227,22 +292,24 @@ router.put('/:id', requireAdmin, combinedUpload.fields([
 
   try {
     // Get the existing book to check if it has old files
-    const existingBook = db.prepare('SELECT * FROM books WHERE id = ?').get(req.params.id);
+    const existingBook = await prisma.book.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
     
     if (!existingBook) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     // Determine cover image path
-    let cover_image = existingBook.cover_image; // Keep existing by default
+    let cover_image = existingBook.coverImage; // Keep existing by default
     
     if (req.files && req.files['cover_image']) {
       // New image uploaded
       cover_image = `/books/${req.files['cover_image'][0].filename}`;
       
       // Delete old image if it exists and is not the default
-      if (existingBook.cover_image && existingBook.cover_image.startsWith('/books/') && !existingBook.cover_image.includes('/pdfs/')) {
-        const oldImagePath = path.join(__dirname, '../../public', existingBook.cover_image);
+      if (existingBook.coverImage && existingBook.coverImage.startsWith('/books/') && !existingBook.coverImage.includes('/pdfs/')) {
+        const oldImagePath = path.join(__dirname, '../../public', existingBook.coverImage);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
@@ -250,15 +317,15 @@ router.put('/:id', requireAdmin, combinedUpload.fields([
     }
 
     // Determine PDF file path
-    let pdf_file = existingBook.pdf_file; // Keep existing by default
+    let pdf_file = existingBook.pdfFile; // Keep existing by default
     
     // Check if PDF is being explicitly deleted (pdf_file: null in body)
     if (req.body.pdf_file === null || req.body.pdf_file === 'null') {
       pdf_file = null;
       
       // Delete old PDF if it exists
-      if (existingBook.pdf_file && existingBook.pdf_file.startsWith('/books/pdfs/')) {
-        const oldPdfPath = path.join(__dirname, '../../public', existingBook.pdf_file);
+      if (existingBook.pdfFile && existingBook.pdfFile.startsWith('/books/pdfs/')) {
+        const oldPdfPath = path.join(__dirname, '../../public', existingBook.pdfFile);
         if (fs.existsSync(oldPdfPath)) {
           fs.unlinkSync(oldPdfPath);
           console.log('Deleted PDF file:', oldPdfPath);
@@ -269,28 +336,27 @@ router.put('/:id', requireAdmin, combinedUpload.fields([
       pdf_file = `/books/pdfs/${req.files['pdf_file'][0].filename}`;
       
       // Delete old PDF if it exists
-      if (existingBook.pdf_file && existingBook.pdf_file.startsWith('/books/pdfs/')) {
-        const oldPdfPath = path.join(__dirname, '../../public', existingBook.pdf_file);
+      if (existingBook.pdfFile && existingBook.pdfFile.startsWith('/books/pdfs/')) {
+        const oldPdfPath = path.join(__dirname, '../../public', existingBook.pdfFile);
         if (fs.existsSync(oldPdfPath)) {
           fs.unlinkSync(oldPdfPath);
         }
       }
     }
 
-    const stmt = db.prepare(`
-      UPDATE books
-      SET title = ?, author = ?, description = ?, cover_image = ?, pdf_file = ?,
-          published_year = ?, genre = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    const result = stmt.run(title, author, description, cover_image, pdf_file, published_year, genre, req.params.id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Book not found' });
-    }
-
-    const updatedBook = db.prepare('SELECT * FROM books WHERE id = ?').get(req.params.id);
+    const updatedBook = await prisma.book.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        title,
+        author,
+        description,
+        coverImage: cover_image,
+        pdfFile: pdf_file,
+        publishedYear: published_year ? parseInt(published_year) : null,
+        genre,
+        language
+      }
+    });
 
     res.json(updatedBook);
   } catch (error) {
@@ -300,61 +366,41 @@ router.put('/:id', requireAdmin, combinedUpload.fields([
 });
 
 // DELETE book (protected)
-router.delete('/:id', requireAdmin, (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     // Get book details before deletion to delete files
-    const book = db.prepare('SELECT * FROM books WHERE id = ?').get(req.params.id);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        characters: {
+          select: {
+            image: true,
+            avatar: true
+          }
+        }
+      }
+    });
     
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    // Get all characters associated with this book
-    const characters = db.prepare('SELECT id FROM characters WHERE book_id = ?').all(req.params.id);
-    const characterIds = characters.map(c => c.id);
+    // Delete the book (Prisma will handle cascade deletes based on schema)
+    await prisma.book.delete({
+      where: { id: parseInt(req.params.id) }
+    });
 
-    // Delete in proper order to avoid foreign key constraints
-    // 1. Delete character personas for these characters
-    if (characterIds.length > 0) {
-      const placeholders = characterIds.map(() => '?').join(',');
-      db.prepare(`DELETE FROM character_personas WHERE character_id IN (${placeholders})`).run(...characterIds);
-    }
+    // Delete associated files from filesystem
+    let filesDeleted = 0;
 
-    // 2. Delete extracted characters for this book
-    db.prepare('DELETE FROM extracted_characters WHERE book_id = ?').run(req.params.id);
-
-    // 3. Delete book chunks
-    db.prepare('DELETE FROM book_chunks WHERE book_id = ?').run(req.params.id);
-
-    // 4. Delete messages in conversations with these characters
-    if (characterIds.length > 0) {
-      const conversations = db.prepare(`
-        SELECT id FROM conversations WHERE character_id IN (${characterIds.map(() => '?').join(',')})
-      `).all(...characterIds);
-      
-      const conversationIds = conversations.map(c => c.id);
-      if (conversationIds.length > 0) {
-        const convPlaceholders = conversationIds.map(() => '?').join(',');
-        db.prepare(`DELETE FROM messages WHERE conversation_id IN (${convPlaceholders})`).run(...conversationIds);
-        db.prepare(`DELETE FROM conversations WHERE id IN (${convPlaceholders})`).run(...conversationIds);
-      }
-    }
-
-    // 5. Delete characters
-    db.prepare('DELETE FROM characters WHERE book_id = ?').run(req.params.id);
-
-    // 6. Delete the book itself
-    const deleteBookStmt = db.prepare('DELETE FROM books WHERE id = ?');
-    const result = deleteBookStmt.run(req.params.id);
-
-    // 7. Delete associated files from filesystem
     // Delete cover image if it exists and is not a default image
-    if (book.cover_image && book.cover_image.startsWith('/books/') && !book.cover_image.includes('/pdfs/')) {
-      const coverPath = path.join(__dirname, '../../public', book.cover_image);
+    if (book.coverImage && book.coverImage.startsWith('/books/') && !book.coverImage.includes('/pdfs/')) {
+      const coverPath = path.join(__dirname, '../../public', book.coverImage);
       if (fs.existsSync(coverPath)) {
         try {
           fs.unlinkSync(coverPath);
           console.log('Deleted cover image:', coverPath);
+          filesDeleted++;
         } catch (err) {
           console.error('Error deleting cover image:', err);
         }
@@ -362,29 +408,171 @@ router.delete('/:id', requireAdmin, (req, res) => {
     }
 
     // Delete PDF file if it exists
-    if (book.pdf_file && book.pdf_file.startsWith('/books/pdfs/')) {
-      const pdfPath = path.join(__dirname, '../../public', book.pdf_file);
+    if (book.pdfFile && book.pdfFile.startsWith('/books/pdfs/')) {
+      const pdfPath = path.join(__dirname, '../../public', book.pdfFile);
       if (fs.existsSync(pdfPath)) {
         try {
           fs.unlinkSync(pdfPath);
           console.log('Deleted PDF file:', pdfPath);
+          filesDeleted++;
         } catch (err) {
           console.error('Error deleting PDF file:', err);
         }
       }
     }
 
+    // Delete all character images and avatars
+    if (book.characters && book.characters.length > 0) {
+      for (const character of book.characters) {
+        // Delete character image
+        if (character.image && character.image.startsWith('/characters/')) {
+          const imagePath = path.join(__dirname, '../../public', character.image);
+          if (fs.existsSync(imagePath)) {
+            try {
+              fs.unlinkSync(imagePath);
+              console.log('Deleted character image:', imagePath);
+              filesDeleted++;
+            } catch (err) {
+              console.error('Error deleting character image:', err);
+            }
+          }
+        }
+
+        // Delete character avatar
+        if (character.avatar && character.avatar.startsWith('/characters/')) {
+          const avatarPath = path.join(__dirname, '../../public', character.avatar);
+          if (fs.existsSync(avatarPath)) {
+            try {
+              fs.unlinkSync(avatarPath);
+              console.log('Deleted character avatar:', avatarPath);
+              filesDeleted++;
+            } catch (err) {
+              console.error('Error deleting character avatar:', err);
+            }
+          }
+        }
+      }
+    }
+
     res.json({ 
       message: 'Book deleted successfully',
-      deleted: {
-        book_id: req.params.id,
-        characters_deleted: characters.length,
-        files_deleted: true
-      }
+      files_deleted: filesDeleted
     });
   } catch (error) {
     console.error('Delete book error:', error);
     res.status(500).json({ error: 'Failed to delete book' });
+  }
+});
+
+// DELETE all characters for a book (protected)
+router.delete('/:id/characters', requireAdmin, async (req, res) => {
+  try {
+    const bookId = parseInt(req.params.id);
+    
+    // Check if book exists and get all characters with their images
+    const book = await prisma.book.findUnique({
+      where: { id: bookId },
+      include: {
+        characters: {
+          select: {
+            id: true,
+            image: true,
+            avatar: true
+          }
+        },
+        _count: {
+          select: { characters: true }
+        }
+      }
+    });
+    
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
+    const characterCount = book._count.characters;
+    let filesDeleted = 0;
+
+    // Delete character image files
+    if (book.characters && book.characters.length > 0) {
+      for (const character of book.characters) {
+        // Delete character image
+        if (character.image && character.image.startsWith('/characters/')) {
+          const imagePath = path.join(__dirname, '../../public', character.image);
+          if (fs.existsSync(imagePath)) {
+            try {
+              fs.unlinkSync(imagePath);
+              console.log('Deleted character image:', imagePath);
+              filesDeleted++;
+            } catch (err) {
+              console.error('Error deleting character image:', err);
+            }
+          }
+        }
+
+        // Delete character avatar
+        if (character.avatar && character.avatar.startsWith('/characters/')) {
+          const avatarPath = path.join(__dirname, '../../public', character.avatar);
+          if (fs.existsSync(avatarPath)) {
+            try {
+              fs.unlinkSync(avatarPath);
+              console.log('Deleted character avatar:', avatarPath);
+              filesDeleted++;
+            } catch (err) {
+              console.error('Error deleting character avatar:', err);
+            }
+          }
+        }
+      }
+    }
+
+    // Delete all characters for this book from database
+    const result = await prisma.character.deleteMany({
+      where: { bookId: bookId }
+    });
+
+    res.json({ 
+      message: `Successfully deleted all characters for book: ${book.title}`,
+      deleted_count: result.count,
+      expected_count: characterCount,
+      files_deleted: filesDeleted
+    });
+  } catch (error) {
+    console.error('Delete book characters error:', error);
+    res.status(500).json({ error: 'Failed to delete characters' });
+  }
+});
+
+// Get active prompts for frontend (public endpoint)
+router.get('/prompts/active', async (req, res) => {
+  try {
+    const prompts = await prisma.prompt.findMany({
+      where: { 
+        isActive: 1,
+        type: 'frontend'
+      },
+      select: {
+        name: true,
+        content: true
+      }
+    });
+    
+    // Convert to object for easy access
+    const promptMap = {};
+    prompts.forEach(p => {
+      promptMap[p.name] = p.content;
+    });
+    
+    // Return default prompts if none found
+    if (Object.keys(promptMap).length === 0) {
+      return res.json(DEFAULT_FRONTEND_PROMPTS);
+    }
+    
+    res.json(promptMap);
+  } catch (error) {
+    console.error('Get active prompts error:', error);
+    // Return default prompts on error
+    res.json(DEFAULT_FRONTEND_PROMPTS);
   }
 });
 

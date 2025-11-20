@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../database');
+const prisma = require('../database');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
@@ -27,7 +27,14 @@ router.post('/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    const existingUser = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(username, email);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: username },
+          { email: email }
+        ]
+      }
+    });
     
     if (existingUser) {
       if (existingUser.username === username) {
@@ -42,23 +49,34 @@ router.post('/register', async (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     // Insert user
-    const insert = db.prepare(`
-      INSERT INTO users (username, email, password, full_name)
-      VALUES (?, ?, ?, ?)
-    `);
-    
-    const result = insert.run(username, email, hashedPassword, fullName || null);
+    const result = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        fullName: fullName || null
+      }
+    });
 
     // Generate token
     const token = jwt.sign(
-      { id: result.lastInsertRowid, username, type: 'user' },
+      { id: result.id, username, type: 'user' },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     // Get created user
-    const user = db.prepare('SELECT id, username, email, full_name, avatar, created_at FROM users WHERE id = ?')
-      .get(result.lastInsertRowid);
+    const user = await prisma.user.findUnique({
+      where: { id: result.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        avatar: true,
+        createdAt: true
+      }
+    });
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -81,7 +99,14 @@ router.post('/login', async (req, res) => {
 
   try {
     // Find user by email or username (email field can contain either)
-    const user = db.prepare('SELECT * FROM users WHERE email = ? OR username = ?').get(email, email);
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { username: email }
+        ]
+      }
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -95,7 +120,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() }
+    });
 
     // Generate token
     const token = jwt.sign(
@@ -119,7 +147,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Verify Token
-router.get('/verify', (req, res) => {
+router.get('/verify', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -133,8 +161,18 @@ router.get('/verify', (req, res) => {
       return res.status(401).json({ error: 'Invalid token type' });
     }
 
-    const user = db.prepare('SELECT id, username, email, full_name, avatar, created_at, last_login FROM users WHERE id = ?')
-      .get(decoded.id);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        avatar: true,
+        createdAt: true,
+        lastLogin: true
+      }
+    });
     
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
@@ -147,7 +185,7 @@ router.get('/verify', (req, res) => {
 });
 
 // Get User Profile
-router.get('/profile', (req, res) => {
+router.get('/profile', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -156,8 +194,18 @@ router.get('/profile', (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, username, email, full_name, avatar, created_at, last_login FROM users WHERE id = ?')
-      .get(decoded.id);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        avatar: true,
+        createdAt: true,
+        lastLogin: true
+      }
+    });
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -170,7 +218,7 @@ router.get('/profile', (req, res) => {
 });
 
 // Update User Profile
-router.put('/profile', (req, res) => {
+router.put('/profile', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -181,11 +229,22 @@ router.put('/profile', (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const { fullName, avatar } = req.body;
 
-    const update = db.prepare('UPDATE users SET full_name = ?, avatar = ? WHERE id = ?');
-    update.run(fullName || null, avatar || null, decoded.id);
-
-    const user = db.prepare('SELECT id, username, email, full_name, avatar, created_at, last_login FROM users WHERE id = ?')
-      .get(decoded.id);
+    const user = await prisma.user.update({
+      where: { id: decoded.id },
+      data: {
+        fullName: fullName || null,
+        avatar: avatar || null
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        avatar: true,
+        createdAt: true,
+        lastLogin: true
+      }
+    });
 
     res.json(user);
   } catch (error) {

@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const db = require('../database');
+const prisma = require('../database');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
@@ -29,7 +29,7 @@ const verifyAdmin = (req, res, next) => {
 };
 
 // Create new user (admin only)
-router.post('/users', verifyAdmin, (req, res) => {
+router.post('/users', verifyAdmin, async (req, res) => {
   try {
     const { username, email, password, full_name, role } = req.body;
 
@@ -54,13 +54,17 @@ router.post('/users', verifyAdmin, (req, res) => {
     const userRole = role && validRoles.includes(role) ? role : 'user';
 
     // Check for duplicate username
-    const existingUsername = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    const existingUsername = await prisma.user.findUnique({
+      where: { username }
+    });
     if (existingUsername) {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
     // Check for duplicate email
-    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existingEmail = await prisma.user.findUnique({
+      where: { email }
+    });
     if (existingEmail) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -69,22 +73,32 @@ router.post('/users', verifyAdmin, (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     // Insert user
-    const insert = db.prepare(`
-      INSERT INTO users (username, email, password, full_name, role)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    
-    const result = insert.run(username, email, hashedPassword, full_name || null, userRole);
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        fullName: full_name || null
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        createdAt: true
+      }
+    });
 
-    // Get created user (without password)
-    const newUser = db.prepare(`
-      SELECT id, username, email, full_name, role, created_at
-      FROM users WHERE id = ?
-    `).get(result.lastInsertRowid);
-
+    // Transform to snake_case for API response
     res.status(201).json({
       message: 'User created successfully',
-      user: newUser
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        full_name: newUser.fullName,
+        created_at: newUser.createdAt
+      }
     });
   } catch (error) {
     console.error('Create user error:', error);
@@ -93,24 +107,45 @@ router.post('/users', verifyAdmin, (req, res) => {
 });
 
 // Get all users with statistics
-router.get('/users', verifyAdmin, (req, res) => {
+router.get('/users', verifyAdmin, async (req, res) => {
   try {
-    const users = db.prepare(`
-      SELECT 
-        u.*,
-        COUNT(DISTINCT c.id) as conversation_count,
-        COUNT(DISTINCT m.id) as message_count
-      FROM users u
-      LEFT JOIN conversations c ON u.id = c.user_id
-      LEFT JOIN messages m ON c.id = m.conversation_id
-      GROUP BY u.id
-      ORDER BY u.created_at DESC
-    `).all();
+    const users = await prisma.user.findMany({
+      include: {
+        conversations: {
+          include: {
+            messages: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-    // Remove passwords from response
-    const sanitizedUsers = users.map(({ password, ...user }) => user);
+    // Transform to match old format with conversation and message counts
+    const usersWithStats = users.map(user => {
+      const conversationCount = user.conversations.length;
+      const messageCount = user.conversations.reduce((acc, conv) => acc + conv.messages.length, 0);
+      
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        full_name: user.fullName,
+        avatar: user.avatar,
+        google_id: user.googleId,
+        facebook_id: user.facebookId,
+        github_id: user.githubId,
+        provider: user.provider,
+        profile_photo: user.profilePhoto,
+        created_at: user.createdAt,
+        last_login: user.lastLogin,
+        conversation_count: conversationCount,
+        message_count: messageCount
+      };
+    });
 
-    res.json(sanitizedUsers);
+    res.json(usersWithStats);
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -370,6 +405,264 @@ router.get('/stats', verifyAdmin, (req, res) => {
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
+// ==================== PROMPT MANAGEMENT ROUTES ====================
+
+// Get all prompts
+router.get('/prompts', verifyAdmin, async (req, res) => {
+  try {
+    const prompts = await prisma.prompt.findMany({
+      orderBy: [
+        { type: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+
+    // Transform to snake_case for API compatibility
+    const transformedPrompts = prompts.map(p => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      content: p.content,
+      description: p.description,
+      is_active: p.isActive,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt
+    }));
+
+    res.json(transformedPrompts);
+  } catch (error) {
+    console.error('Get prompts error:', error);
+    res.status(500).json({ error: 'Failed to fetch prompts', details: error.message });
+  }
+});
+
+// Get prompt by ID
+router.get('/prompts/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const prompt = await prisma.prompt.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!prompt) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    // Transform to snake_case
+    res.json({
+      id: prompt.id,
+      name: prompt.name,
+      type: prompt.type,
+      content: prompt.content,
+      description: prompt.description,
+      is_active: prompt.isActive,
+      created_at: prompt.createdAt,
+      updated_at: prompt.updatedAt
+    });
+  } catch (error) {
+    console.error('Get prompt error:', error);
+    res.status(500).json({ error: 'Failed to fetch prompt' });
+  }
+});
+
+// Get prompts by type
+router.get('/prompts/type/:type', verifyAdmin, async (req, res) => {
+  try {
+    const { type } = req.params;
+    
+    const prompts = await prisma.prompt.findMany({
+      where: { type },
+      orderBy: { name: 'asc' }
+    });
+
+    // Transform to snake_case
+    const transformedPrompts = prompts.map(p => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      content: p.content,
+      description: p.description,
+      is_active: p.isActive,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt
+    }));
+
+    res.json(transformedPrompts);
+  } catch (error) {
+    console.error('Get prompts by type error:', error);
+    res.status(500).json({ error: 'Failed to fetch prompts' });
+  }
+});
+
+// Create new prompt
+router.post('/prompts', verifyAdmin, async (req, res) => {
+  try {
+    const { name, type, content, description, is_active } = req.body;
+
+    // Validate required fields
+    if (!name || !type || !content) {
+      return res.status(400).json({ error: 'Name, type, and content are required' });
+    }
+
+    // Check if prompt name already exists
+    const existing = await prisma.prompt.findUnique({
+      where: { name }
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'Prompt name already exists' });
+    }
+
+    const newPrompt = await prisma.prompt.create({
+      data: {
+        name,
+        type,
+        content,
+        description: description || null,
+        isActive: is_active !== undefined ? is_active : 1
+      }
+    });
+
+    // Transform to snake_case
+    res.status(201).json({
+      id: newPrompt.id,
+      name: newPrompt.name,
+      type: newPrompt.type,
+      content: newPrompt.content,
+      description: newPrompt.description,
+      is_active: newPrompt.isActive,
+      created_at: newPrompt.createdAt,
+      updated_at: newPrompt.updatedAt
+    });
+  } catch (error) {
+    console.error('Create prompt error:', error);
+    res.status(500).json({ error: 'Failed to create prompt' });
+  }
+});
+
+// Update prompt
+router.put('/prompts/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, content, description, is_active } = req.body;
+
+    // Check if prompt exists
+    const existing = await prisma.prompt.findUnique({
+      where: { id: parseInt(id) }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    // Validate required fields
+    if (!name || !type || !content) {
+      return res.status(400).json({ error: 'Name, type, and content are required' });
+    }
+
+    // Check if new name conflicts with another prompt
+    const nameConflict = await prisma.prompt.findFirst({
+      where: {
+        name,
+        NOT: {
+          id: parseInt(id)
+        }
+      }
+    });
+    if (nameConflict) {
+      return res.status(400).json({ error: 'Prompt name already exists' });
+    }
+
+    const updatedPrompt = await prisma.prompt.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        type,
+        content,
+        description: description || null,
+        isActive: is_active !== undefined ? is_active : 1
+      }
+    });
+
+    // Transform to snake_case
+    res.json({
+      id: updatedPrompt.id,
+      name: updatedPrompt.name,
+      type: updatedPrompt.type,
+      content: updatedPrompt.content,
+      description: updatedPrompt.description,
+      is_active: updatedPrompt.isActive,
+      created_at: updatedPrompt.createdAt,
+      updated_at: updatedPrompt.updatedAt
+    });
+  } catch (error) {
+    console.error('Update prompt error:', error);
+    res.status(500).json({ error: 'Failed to update prompt' });
+  }
+});
+
+// Delete prompt
+router.delete('/prompts/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if prompt exists
+    const existing = await prisma.prompt.findUnique({
+      where: { id: parseInt(id) },
+      select: { id: true, name: true }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    await prisma.prompt.delete({
+      where: { id: parseInt(id) }
+    });
+
+    res.json({ message: 'Prompt deleted successfully', deleted: existing });
+  } catch (error) {
+    console.error('Delete prompt error:', error);
+    res.status(500).json({ error: 'Failed to delete prompt' });
+  }
+});
+
+// Toggle prompt active status
+router.patch('/prompts/:id/toggle', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if prompt exists
+    const prompt = await prisma.prompt.findUnique({
+      where: { id: parseInt(id) },
+      select: { id: true, isActive: true }
+    });
+    if (!prompt) {
+      return res.status(404).json({ error: 'Prompt not found' });
+    }
+
+    const newStatus = prompt.isActive ? 0 : 1;
+
+    const updatedPrompt = await prisma.prompt.update({
+      where: { id: parseInt(id) },
+      data: { isActive: newStatus }
+    });
+
+    // Transform to snake_case
+    res.json({
+      id: updatedPrompt.id,
+      name: updatedPrompt.name,
+      type: updatedPrompt.type,
+      content: updatedPrompt.content,
+      description: updatedPrompt.description,
+      is_active: updatedPrompt.isActive,
+      created_at: updatedPrompt.createdAt,
+      updated_at: updatedPrompt.updatedAt
+    });
+  } catch (error) {
+    console.error('Toggle prompt error:', error);
+    res.status(500).json({ error: 'Failed to toggle prompt status' });
   }
 });
 

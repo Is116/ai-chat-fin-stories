@@ -1,13 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../database');
+const prisma = require('../database');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -16,7 +16,14 @@ router.post('/login', (req, res) => {
 
   try {
     // Find admin by username or email
-    const admin = db.prepare('SELECT * FROM admins WHERE username = ? OR email = ?').get(username, username);
+    const admin = await prisma.admin.findFirst({
+      where: {
+        OR: [
+          { username: username },
+          { email: username }
+        ]
+      }
+    });
 
     if (!admin) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -49,7 +56,7 @@ router.post('/login', (req, res) => {
 });
 
 // Register new admin (protected - only existing admins can create new ones)
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { username, password, email } = req.body;
 
   if (!username || !password || !email) {
@@ -58,15 +65,20 @@ router.post('/register', (req, res) => {
 
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const insert = db.prepare('INSERT INTO admins (username, password, email) VALUES (?, ?, ?)');
-    const result = insert.run(username, hashedPassword, email);
+    const result = await prisma.admin.create({
+      data: {
+        username,
+        password: hashedPassword,
+        email
+      }
+    });
 
     res.status(201).json({
       message: 'Admin created successfully',
-      admin: { id: result.lastInsertRowid, username, email }
+      admin: { id: result.id, username, email }
     });
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint')) {
+    if (error.code === 'P2002') {
       res.status(400).json({ error: 'Username or email already exists' });
     } else {
       console.error('Register error:', error);
@@ -76,7 +88,7 @@ router.post('/register', (req, res) => {
 });
 
 // Verify token
-router.get('/verify', (req, res) => {
+router.get('/verify', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -85,7 +97,10 @@ router.get('/verify', (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const admin = db.prepare('SELECT id, username, email FROM admins WHERE id = ?').get(decoded.id);
+    const admin = await prisma.admin.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, username: true, email: true }
+    });
     
     if (!admin) {
       return res.status(401).json({ error: 'Admin not found' });

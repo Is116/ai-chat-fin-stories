@@ -39,6 +39,7 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
       const bookKey = character.book_title || 'Unknown Book';
       if (!groupedBooks[bookKey]) {
         groupedBooks[bookKey] = {
+          id: character.bookId, // Add book ID
           title: character.book_title,
           author: character.book_author,
           description: character.book_description,
@@ -383,7 +384,7 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
                           {/* Action Button */}
                           <div className="pt-2">
                             <Link
-                              to={`/book/${book.characters[0]?.book_id}/characters`}
+                              to={`/book/${book.id}/characters`}
                               className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-2.5 px-4 rounded-lg text-sm hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
                             >
                               View Characters

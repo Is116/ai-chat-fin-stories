@@ -1,7 +1,7 @@
 const { PDFParse } = require('pdf-parse');
 const fs = require('fs').promises;
 const path = require('path');
-const db = require('../database');
+const prisma = require('../database');
 
 const MAX_CHUNK_SIZE = parseInt(process.env.MAX_CHUNK_SIZE) || 1000;
 const CHUNK_OVERLAP = parseInt(process.env.CHUNK_OVERLAP) || 100;
@@ -98,8 +98,10 @@ function chunkText(text, chapterNumber, maxChunkSize = MAX_CHUNK_SIZE, overlap =
 
 async function processBook(bookId, filePath) {
   try {
-    const updateStmt = db.prepare('UPDATE books SET processing_status = ? WHERE id = ?');
-    updateStmt.run('processing', bookId);
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { processingStatus: 'processing' }
+    });
 
     const ext = path.extname(filePath).toLowerCase();
     let fullText;
@@ -116,23 +118,34 @@ async function processBook(bookId, filePath) {
     console.log(`Detected ${chapters.length} chapters in book ${bookId}`);
 
     let totalChunks = 0;
-    const insertStmt = db.prepare(
-      'INSERT INTO book_chunks (book_id, chunk_id, chunk_text, chapter_number, word_count, chunk_index) VALUES (?, ?, ?, ?, ?, ?)'
-    );
 
     for (const chapter of chapters) {
       const chunks = chunkText(chapter.text, chapter.number);
 
       for (let i = 0; i < chunks.length; i++) {
         const chunkId = `${bookId}-ch${chapter.number}-${i + 1}`;
-        insertStmt.run(bookId, chunkId, chunks[i].text, chapter.number, chunks[i].wordCount, i);
+        await prisma.bookChunk.create({
+          data: {
+            bookId: bookId,
+            chunkId: chunkId,
+            chunkText: chunks[i].text,
+            chapterNumber: chapter.number,
+            wordCount: chunks[i].wordCount,
+            chunkIndex: i
+          }
+        });
         totalChunks++;
       }
     }
 
-    updateStmt.run('chunks_created', bookId);
-    const updateChunksStmt = db.prepare('UPDATE books SET total_chunks = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?');
-    updateChunksStmt.run(totalChunks, bookId);
+    await prisma.book.update({
+      where: { id: bookId },
+      data: {
+        processingStatus: 'chunks_created',
+        totalChunks: totalChunks,
+        processedAt: new Date()
+      }
+    });
 
     console.log(`Book ${bookId} processed: ${chapters.length} chapters, ${totalChunks} chunks`);
 
@@ -144,21 +157,43 @@ async function processBook(bookId, filePath) {
     };
 
   } catch (error) {
-    const updateStmt = db.prepare('UPDATE books SET processing_status = ?, error_message = ? WHERE id = ?');
-    updateStmt.run('error', error.message, bookId);
+    await prisma.book.update({
+      where: { id: bookId },
+      data: {
+        processingStatus: 'error',
+        errorMessage: error.message
+      }
+    });
     throw error;
   }
 }
 
 
-function getBookChunks(bookId) {
-  const stmt = db.prepare('SELECT * FROM book_chunks WHERE book_id = ? ORDER BY chapter_number, chunk_index');
-  return stmt.all(bookId);
+async function getBookChunks(bookId) {
+  const chunks = await prisma.bookChunk.findMany({
+    where: { bookId: bookId },
+    orderBy: [
+      { chapterNumber: 'asc' },
+      { chunkIndex: 'asc' }
+    ]
+  });
+  
+  // Transform to match old format for compatibility
+  return chunks.map(c => ({
+    id: c.id,
+    book_id: c.bookId,
+    chapter_number: c.chapterNumber,
+    chunk_index: c.chunkIndex,
+    chunk_text: c.chunkText,
+    word_count: c.wordCount,
+    chunk_id: c.chunkId,
+    created_at: c.createdAt
+  }));
 }
 
 
-function getBookFullText(bookId) {
-  const chunks = getBookChunks(bookId);
+async function getBookFullText(bookId) {
+  const chunks = await getBookChunks(bookId);
   return chunks.map(chunk => chunk.chunk_text).join('\n\n');
 }
 

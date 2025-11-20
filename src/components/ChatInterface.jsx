@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, ArrowLeft, Image as ImageIcon, X, Trash2, History } from 'lucide-react';
+import { Send, Loader2, ArrowLeft, Image as ImageIcon, X, Trash2, History, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Message from './Message';
 import { sendMessageToCharacter } from '../utils/api';
@@ -394,8 +394,30 @@ const ChatInterface = ({ character, onBack, user }) => {
             </div>
             <div className="text-white flex-1">
               <h1 className="text-4xl md:text-5xl font-bold mb-2 notranslate" translate="no">{character.name}</h1>
-              <p className="text-lg font-semibold opacity-90 notranslate" translate="no">{character.book}</p>
-              <p className="text-sm font-medium opacity-75">by <span className="notranslate" translate="no">{character.author}</span></p>
+              
+              {/* Book Information */}
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-4 h-4 opacity-75" />
+                <p className="text-lg font-semibold opacity-90 notranslate" translate="no">{character.book}</p>
+              </div>
+              <p className="text-sm font-medium opacity-75 mb-3">
+                by <span className="notranslate" translate="no">{character.author}</span>
+                {character.published_year && (
+                  <span> • {character.published_year}</span>
+                )}
+                {character.genre && (
+                  <span> • <span className="notranslate" translate="no">{character.genre}</span></span>
+                )}
+              </p>
+              
+              {/* Character Description/Personality */}
+              {character.personality && (
+                <div className="mt-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg p-3 max-w-3xl">
+                  <p className="text-sm font-medium opacity-90 leading-relaxed notranslate" translate="no">
+                    💭 {character.personality}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

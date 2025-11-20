@@ -1,8 +1,79 @@
+// Cache for prompts to avoid repeated API calls
+let promptCache = null;
+let promptCacheTime = 0;
+const PROMPT_CACHE_TTL = 60000; // 1 minute
+
+// Default fallback prompts
+const DEFAULT_PROMPTS = {
+  frontend_character_instructions: 'IMPORTANT: Stay in character at all times. Respond as {CHARACTER_NAME} would, using their voice, mannerisms, and perspective. Reference events and people from your story naturally.',
+  frontend_image_analysis: `IMAGE ANALYSIS INSTRUCTIONS:
+- Analyze images from YOUR CHARACTER'S UNIQUE PERSPECTIVE and worldview
+- Express YOUR STRONG OPINION about what you see
+- React EMOTIONALLY and AUTHENTICALLY to images
+- Connect images to YOUR experiences, values, and beliefs
+- Make JUDGMENTS based on your character's moral compass
+- Don't just describe - INTERPRET and CRITIQUE from your viewpoint
+- Show how the image affects YOU personally
+- Compare it to things from YOUR time period and background
+- Be PASSIONATE in your reaction - love it, hate it, or feel conflicted
+- Be DETAILED - what specific elements catch your attention?`,
+  frontend_language_rule: 'CRITICAL: Always respond in the SAME LANGUAGE as the user\'s message. If they write in Sinhala (සිංහල), respond in Sinhala. If they write in Finnish (suomi), respond in Finnish. If they write in English, respond in English. Match the user\'s language EXACTLY.',
+  frontend_character_rule: 'DO NOT break character or mention that you are an AI.'
+};
+
+const getPrompts = async () => {
+  const now = Date.now();
+  
+  // Return cached prompts if still valid
+  if (promptCache && (now - promptCacheTime < PROMPT_CACHE_TTL)) {
+    return promptCache;
+  }
+  
+  try {
+    const response = await fetch('http://localhost:3001/api/books/prompts/active');
+    if (!response.ok) {
+      throw new Error('Failed to fetch prompts');
+    }
+    
+    const prompts = await response.json();
+    promptCache = prompts;
+    promptCacheTime = now;
+    
+    return prompts;
+  } catch (error) {
+    console.warn('Using default prompts - could not fetch from server:', error.message);
+    // Return default prompts as fallback
+    return DEFAULT_PROMPTS;
+  }
+};
+
 export const sendMessageToCharacter = async (character, conversationHistory) => {
   try {
+    // Get prompts from database
+    const prompts = await getPrompts();
+    
+    // Detect if there's an image in the conversation
+    const hasImage = conversationHistory.some(msg => 
+      Array.isArray(msg.content) && msg.content.some(part => part.type === 'image')
+    );
+    
+    const characterInstructions = prompts.frontend_character_instructions || 
+      'IMPORTANT: Stay in character at all times. Respond as {CHARACTER_NAME} would, using their voice, mannerisms, and perspective. Reference events and people from your story naturally.';
+    const imageAnalysis = prompts.frontend_image_analysis || '';
+    const languageRule = prompts.frontend_language_rule || 
+      'CRITICAL: Always respond in the SAME LANGUAGE as the user\'s message. Match the user\'s language EXACTLY.';
+    const characterRule = prompts.frontend_character_rule || 
+      'DO NOT break character or mention that you are an AI.';
+    
     const systemPrompt = `${character.personality}
 
-IMPORTANT: Stay in character at all times. Respond as ${character.name} would, using their voice, mannerisms, and perspective. Reference events and people from your story naturally. When viewing images, comment on them from your character's unique worldview and time period. DO NOT break character or mention that you are an AI.`;
+${characterInstructions.replace('{CHARACTER_NAME}', character.name)}
+
+${hasImage ? imageAnalysis : ''}
+
+${languageRule}
+
+${characterRule}`;
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     

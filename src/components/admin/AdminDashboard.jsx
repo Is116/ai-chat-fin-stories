@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, LogOut, User as UserIcon, Users, BookOpen, Shield, MessageSquare, Library, ChevronDown, ChevronRight, Upload, X, Search, ChevronLeft, ChevronRight as ChevronRightIcon, Sparkles } from 'lucide-react';
+import PromptManager from './PromptManager';
 
 const AdminDashboard = ({ admin, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('books'); // 'books', 'characters', or 'users'
+  const [activeTab, setActiveTab] = useState('books'); // 'books', 'characters', 'users', or 'prompts'
   const [books, setBooks] = useState([]);
   const [characters, setCharacters] = useState([]);
   const [users, setUsers] = useState([]);
@@ -85,6 +86,12 @@ const AdminDashboard = ({ admin, onLogout }) => {
   const [bookPdfFile, setBookPdfFile] = useState(null);
   const [bookPdfFileName, setBookPdfFileName] = useState(null);
   const [analyzingPdf, setAnalyzingPdf] = useState(false);
+  const [pdfAnalysisError, setPdfAnalysisError] = useState(null);
+  
+  // Error and retry state
+  const [bookSubmitError, setBookSubmitError] = useState(null);
+  const [characterGenerationError, setCharacterGenerationError] = useState(null);
+  const [failedBookId, setFailedBookId] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'books') {
@@ -184,6 +191,9 @@ const AdminDashboard = ({ admin, onLogout }) => {
     console.log('bookFormData:', bookFormData);
     console.log('bookImageFile:', bookImageFile);
     console.log('bookPdfFile:', bookPdfFile);
+    
+    // Clear previous errors
+    setBookSubmitError(null);
 
     try {
       const url = editingBook
@@ -239,13 +249,18 @@ const AdminDashboard = ({ admin, onLogout }) => {
         });
       }
 
-      if (!response.ok) throw new Error('Failed to save book');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save book');
+      }
 
       await fetchBooks();
       resetBookForm();
+      alert('Book saved successfully!');
     } catch (error) {
       console.error('Error saving book:', error);
-      alert('Failed to save book');
+      setBookSubmitError(error.message);
+      // Don't close the form - keep it open for retry
     }
   };
 
@@ -304,6 +319,8 @@ const AdminDashboard = ({ admin, onLogout }) => {
     setBookImagePreview(null);
     setBookPdfFile(null);
     setBookPdfFileName(null);
+    setBookSubmitError(null); // Clear errors when closing form
+    setPdfAnalysisError(null); // Clear PDF analysis errors
     setBookFormData({
       title: '',
       author: '',
@@ -392,8 +409,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
     const token = localStorage.getItem('adminToken');
     
+    // Clear previous errors
+    setCharacterGenerationError(null);
+    setFailedBookId(null);
+    
     // Add book to generating set
     setGeneratingCharacters(prev => new Set([...prev, bookId]));
+
+    let hasError = false;
 
     try {
       console.log('🚀 Starting AI character generation...');
@@ -420,9 +443,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
       alert(`Success! Generated ${result.characters.length} characters:\n${result.characters.map(c => `• ${c.name}`).join('\n')}\n\nYou can now chat with them!`);
     } catch (error) {
       console.error('Error generating characters:', error);
-      alert(`Failed to generate characters: ${error.message}`);
+      hasError = true;
+      setCharacterGenerationError(error.message);
+      setFailedBookId(bookId);
     } finally {
-      // Remove book from generating set
+      // Always remove from generating set
       setGeneratingCharacters(prev => {
         const next = new Set(prev);
         next.delete(bookId);
@@ -430,55 +455,55 @@ const AdminDashboard = ({ admin, onLogout }) => {
       });
     }
   };
+  
+  const handleRetryCharacterGeneration = (bookId) => {
+    // Clear error state
+    setCharacterGenerationError(null);
+    setFailedBookId(null);
+    
+    // Retry generation
+    handleGenerateCharacters(bookId);
+  };
+  
+  const handleDismissCharacterError = (bookId) => {
+    setCharacterGenerationError(null);
+    setFailedBookId(null);
+  };
 
   const handleDeleteAllCharacters = async (bookId, bookTitle) => {
-    // Get characters count for this book
-    const bookCharacters = characters.filter(c => c.book_id === bookId);
+    // Find the book to get character count
+    const book = books.find(b => b.id === bookId);
     
-    if (bookCharacters.length === 0) {
+    if (!book || book.character_count === 0) {
       alert('No characters found for this book.');
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ALL ${bookCharacters.length} character(s) from "${bookTitle}"?\n\nThis will permanently delete:\n${bookCharacters.map(c => `• ${c.name}`).join('\n')}\n\nThis action cannot be undone!`)) return;
+    if (!confirm(`Are you sure you want to delete ALL ${book.character_count} character(s) from "${bookTitle}"?\n\nThis action cannot be undone!`)) return;
 
     const token = localStorage.getItem('adminToken');
     
     try {
-      let deletedCount = 0;
-      let failedCount = 0;
-
-      // Delete each character
-      for (const character of bookCharacters) {
-        try {
-          const response = await fetch(`http://localhost:3001/api/characters/${character.id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            deletedCount++;
-          } else {
-            failedCount++;
-            console.error(`Failed to delete character ${character.name}`);
-          }
-        } catch (error) {
-          failedCount++;
-          console.error(`Error deleting character ${character.name}:`, error);
+      // Use the new bulk delete endpoint
+      const response = await fetch(`http://localhost:3001/api/books/${bookId}/characters`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete characters');
       }
 
+      const data = await response.json();
+      
       // Refresh data
       await fetchBooks();
       await fetchCharacters();
 
-      if (failedCount === 0) {
-        alert(`Successfully deleted all ${deletedCount} character(s) from "${bookTitle}"`);
-      } else {
-        alert(`Deleted ${deletedCount} character(s), but ${failedCount} failed. Check console for details.`);
-      }
+      alert(`Successfully deleted all ${data.deleted_count} character(s) from "${bookTitle}"`);
     } catch (error) {
       console.error('Error deleting characters:', error);
       alert(`Failed to delete characters: ${error.message}`);
@@ -738,6 +763,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
 
   const analyzePdfWithAI = async (pdfFile) => {
     setAnalyzingPdf(true);
+    setPdfAnalysisError(null); // Clear previous errors
     
     try {
       const formData = new FormData();
@@ -782,9 +808,16 @@ const AdminDashboard = ({ admin, onLogout }) => {
             '\n\nReview and edit if needed, then click Save.');
     } catch (error) {
       console.error('Error analyzing PDF:', error);
-      alert(`Failed to analyze PDF: ${error.message}\n\nPlease fill in the book details manually.`);
+      setPdfAnalysisError(error.message);
+      // Don't show alert - show error UI instead
     } finally {
       setAnalyzingPdf(false);
+    }
+  };
+  
+  const handleRetryPdfAnalysis = () => {
+    if (bookPdfFile) {
+      analyzePdfWithAI(bookPdfFile);
     }
   };
 
@@ -932,6 +965,17 @@ const AdminDashboard = ({ admin, onLogout }) => {
               <span className={`${activeTab === 'users' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-700'} text-white px-2 py-0.5 rounded-full text-xs font-semibold`}>
                 {users.length}
               </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('prompts')}
+              className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all rounded-lg ${
+                activeTab === 'prompts'
+                  ? 'bg-white text-gray-900 shadow-lg'
+                  : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              Prompts
             </button>
           </div>
         </div>
@@ -1122,7 +1166,7 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                           </span>
                                         </button>
                                       )}
-                                      {book.characters?.length > 0 && (
+                                      {book.character_count > 0 && (
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1186,7 +1230,14 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                               </div>
                                               <div className="flex-1 min-w-0">
                                                 <h5 className="font-bold text-sm mb-1 truncate text-gray-900">{character.name}</h5>
-                                                <p className="text-xs text-gray-600 line-clamp-2">{character.personality}</p>
+                                                {character.description && (
+                                                  <p className="text-xs text-gray-600 line-clamp-2 mb-1">
+                                                    <span className="font-semibold">Description:</span> {character.description}
+                                                  </p>
+                                                )}
+                                                <p className="text-xs text-gray-500 line-clamp-2">
+                                                  <span className="font-semibold">Personality:</span> {character.personality}
+                                                </p>
                                                 <div className="flex gap-2 mt-3">
                                                   <button
                                                     onClick={(e) => {
@@ -1607,17 +1658,17 @@ const AdminDashboard = ({ admin, onLogout }) => {
                       <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedCharacter.personality}</p>
                     </div>
 
+                    {selectedCharacter.description && (
+                      <div>
+                        <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Description</label>
+                        <p className="text-gray-700 leading-relaxed bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">{selectedCharacter.description}</p>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Greeting</label>
                       <p className="text-gray-700 leading-relaxed italic bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-l-4 border-purple-500">"{selectedCharacter.greeting}"</p>
                     </div>
-
-                    {selectedCharacter.description && (
-                      <div>
-                        <label className="block text-sm font-bold mb-2 text-purple-600 uppercase tracking-wide">Description</label>
-                        <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg">{selectedCharacter.description}</p>
-                      </div>
-                    )}
 
                     <div className="flex gap-4 pt-4 border-t border-gray-200">
                       <button
@@ -1763,6 +1814,11 @@ const AdminDashboard = ({ admin, onLogout }) => {
                                   <h3 className="text-lg font-bold mb-1 text-gray-900">{character.name}</h3>
                                   <p className="text-sm font-semibold text-purple-600 mb-1">{character.book_title}</p>
                                   <p className="text-xs text-gray-500 mb-2">by {character.book_author}</p>
+                                  {character.description && (
+                                    <p className="text-xs text-gray-700 mb-2 line-clamp-2">
+                                      <span className="font-semibold text-blue-600">Description:</span> {character.description}
+                                    </p>
+                                  )}
                                   <p className="text-sm text-gray-600 line-clamp-2 italic">"{character.greeting}"</p>
                                 </div>
                               </div>
@@ -2609,6 +2665,146 @@ const AdminDashboard = ({ admin, onLogout }) => {
             </form>
           </div>
         </div>
+      )}
+      
+      {/* Character Generation Error Modal */}
+      {characterGenerationError && failedBookId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <X className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Character Generation Failed</h2>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700 leading-relaxed">
+                {characterGenerationError}
+              </p>
+              
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <p className="text-sm text-yellow-800">
+                  <strong>Tip:</strong> Make sure the PDF contains readable text and the book has been uploaded correctly.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-gray-50 flex gap-3">
+              <button
+                onClick={() => handleRetryCharacterGeneration(failedBookId)}
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Retry Generation
+              </button>
+              <button
+                onClick={() => handleDismissCharacterError(failedBookId)}
+                className="flex-1 bg-white text-gray-700 font-semibold py-3 px-6 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Book Submit Error Modal */}
+      {bookSubmitError && showBookForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <X className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Failed to Save Book</h2>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700 leading-relaxed">
+                {bookSubmitError}
+              </p>
+              
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                <p className="text-sm text-blue-800">
+                  <strong>Tip:</strong> Check your connection and make sure all required fields are filled correctly.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-gray-50 flex gap-3">
+              <button
+                onClick={() => {
+                  setBookSubmitError(null);
+                  // Form stays open, user can click submit again
+                }}
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Try Again
+              </button>
+              <button
+                onClick={() => setBookSubmitError(null)}
+                className="flex-1 bg-white text-gray-700 font-semibold py-3 px-6 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* PDF Analysis Error Modal */}
+      {pdfAnalysisError && !analyzingPdf && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <X className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">PDF Analysis Failed</h2>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700 leading-relaxed">
+                {pdfAnalysisError}
+              </p>
+              
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                <p className="text-sm text-blue-800">
+                  <strong>Tip:</strong> You can retry the AI analysis or dismiss this and fill in the book details manually.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-gray-50 flex gap-3">
+              <button
+                onClick={handleRetryPdfAnalysis}
+                className="flex-1 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Retry Analysis
+              </button>
+              <button
+                onClick={() => setPdfAnalysisError(null)}
+                className="flex-1 bg-white text-gray-700 font-semibold py-3 px-6 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Fill Manually
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompts Tab */}
+      {activeTab === 'prompts' && (
+        <PromptManager />
       )}
     </div>
   );

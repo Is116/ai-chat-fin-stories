@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const db = require('../database');
+const prisma = require('../database');
 const { generateCharacterResponse } = require('../services/ai-chat');
 
 const router = express.Router();
@@ -29,19 +29,48 @@ const verifyUser = (req, res, next) => {
 };
 
 // Get all conversations for a user
-router.get('/', verifyUser, (req, res) => {
+router.get('/', verifyUser, async (req, res) => {
   try {
-    const conversations = db.prepare(`
-      SELECT c.*, ch.name as character_name, ch.avatar as character_avatar, ch.color as character_color,
-             (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count,
-             (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message
-      FROM conversations c
-      JOIN characters ch ON c.character_id = ch.id
-      WHERE c.user_id = ?
-      ORDER BY c.updated_at DESC
-    `).all(req.userId);
+    const conversations = await prisma.conversation.findMany({
+      where: { userId: req.userId },
+      include: {
+        character: {
+          select: {
+            name: true,
+            avatar: true,
+            color: true
+          }
+        },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            content: true
+          }
+        },
+        _count: {
+          select: { messages: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
 
-    res.json(conversations);
+    // Format response to match old structure
+    const formattedConversations = conversations.map(c => ({
+      id: c.id,
+      user_id: c.userId,
+      character_id: c.characterId,
+      title: c.title,
+      created_at: c.createdAt,
+      updated_at: c.updatedAt,
+      character_name: c.character.name,
+      character_avatar: c.character.avatar,
+      character_color: c.character.color,
+      message_count: c._count.messages,
+      last_message: c.messages[0]?.content || null
+    }));
+
+    res.json(formattedConversations);
   } catch (error) {
     console.error('Get conversations error:', error);
     res.status(500).json({ error: 'Failed to fetch conversations' });
@@ -49,27 +78,59 @@ router.get('/', verifyUser, (req, res) => {
 });
 
 // Get single conversation with messages
-router.get('/:id', verifyUser, (req, res) => {
+router.get('/:id', verifyUser, async (req, res) => {
   try {
-    const conversation = db.prepare(`
-      SELECT c.*, ch.name as character_name, ch.avatar as character_avatar, 
-             ch.color as character_color, ch.image as character_image, ch.personality, ch.greeting
-      FROM conversations c
-      JOIN characters ch ON c.character_id = ch.id
-      WHERE c.id = ? AND c.user_id = ?
-    `).get(req.params.id, req.userId);
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        userId: req.userId
+      },
+      include: {
+        character: {
+          select: {
+            name: true,
+            avatar: true,
+            color: true,
+            image: true,
+            personality: true,
+            greeting: true
+          }
+        },
+        messages: {
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    });
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    const messages = db.prepare(`
-      SELECT * FROM messages 
-      WHERE conversation_id = ? 
-      ORDER BY created_at ASC
-    `).all(req.params.id);
+    // Format response to match old structure
+    const formattedConversation = {
+      id: conversation.id,
+      user_id: conversation.userId,
+      character_id: conversation.characterId,
+      title: conversation.title,
+      created_at: conversation.createdAt,
+      updated_at: conversation.updatedAt,
+      character_name: conversation.character.name,
+      character_avatar: conversation.character.avatar,
+      character_color: conversation.character.color,
+      character_image: conversation.character.image,
+      personality: conversation.character.personality,
+      greeting: conversation.character.greeting,
+      messages: conversation.messages.map(m => ({
+        id: m.id,
+        conversation_id: m.conversationId,
+        role: m.role,
+        content: m.content,
+        image: m.image,
+        created_at: m.createdAt
+      }))
+    };
 
-    res.json({ ...conversation, messages });
+    res.json(formattedConversation);
   } catch (error) {
     console.error('Get conversation error:', error);
     res.status(500).json({ error: 'Failed to fetch conversation' });
@@ -77,7 +138,7 @@ router.get('/:id', verifyUser, (req, res) => {
 });
 
 // Create new conversation
-router.post('/', verifyUser, (req, res) => {
+router.post('/', verifyUser, async (req, res) => {
   const { characterId, title } = req.body;
 
   if (!characterId) {
@@ -86,42 +147,71 @@ router.post('/', verifyUser, (req, res) => {
 
   try {
     // Check if character exists
-    const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(characterId);
+    const character = await prisma.character.findUnique({
+      where: { id: parseInt(characterId) }
+    });
     
     if (!character) {
       return res.status(404).json({ error: 'Character not found' });
     }
 
-    // Create conversation
-    const insert = db.prepare(`
-      INSERT INTO conversations (user_id, character_id, title)
-      VALUES (?, ?, ?)
-    `);
-
     const conversationTitle = title || `Chat with ${character.name}`;
-    const result = insert.run(req.userId, characterId, conversationTitle);
 
-    // Add initial greeting message
-    const messageInsert = db.prepare(`
-      INSERT INTO messages (conversation_id, role, content)
-      VALUES (?, 'assistant', ?)
-    `);
-    messageInsert.run(result.lastInsertRowid, character.greeting);
+    // Create conversation with initial greeting message
+    const conversation = await prisma.conversation.create({
+      data: {
+        userId: req.userId,
+        characterId: parseInt(characterId),
+        title: conversationTitle,
+        messages: {
+          create: {
+            role: 'assistant',
+            content: character.greeting
+          }
+        }
+      },
+      include: {
+        character: {
+          select: {
+            name: true,
+            avatar: true,
+            color: true,
+            image: true,
+            personality: true,
+            greeting: true
+          }
+        },
+        messages: {
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    });
 
-    // Get created conversation
-    const conversation = db.prepare(`
-      SELECT c.*, ch.name as character_name, ch.avatar as character_avatar,
-             ch.color as character_color, ch.image as character_image,
-             ch.personality, ch.greeting
-      FROM conversations c
-      JOIN characters ch ON c.character_id = ch.id
-      WHERE c.id = ?
-    `).get(result.lastInsertRowid);
+    // Format response to match old structure
+    const formattedConversation = {
+      id: conversation.id,
+      user_id: conversation.userId,
+      character_id: conversation.characterId,
+      title: conversation.title,
+      created_at: conversation.createdAt,
+      updated_at: conversation.updatedAt,
+      character_name: conversation.character.name,
+      character_avatar: conversation.character.avatar,
+      character_color: conversation.character.color,
+      character_image: conversation.character.image,
+      personality: conversation.character.personality,
+      greeting: conversation.character.greeting,
+      messages: conversation.messages.map(m => ({
+        id: m.id,
+        conversation_id: m.conversationId,
+        role: m.role,
+        content: m.content,
+        image: m.image,
+        created_at: m.createdAt
+      }))
+    };
 
-    const messages = db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC')
-      .all(result.lastInsertRowid);
-
-    res.status(201).json({ ...conversation, messages });
+    res.status(201).json(formattedConversation);
   } catch (error) {
     console.error('Create conversation error:', error);
     res.status(500).json({ error: 'Failed to create conversation' });
@@ -142,66 +232,101 @@ router.post('/:id/messages', verifyUser, async (req, res) => {
 
   try {
     // Verify conversation belongs to user
-    const conversation = db.prepare(`
-      SELECT c.*, ch.id as character_id, ch.name as character_name, ch.personality
-      FROM conversations c
-      JOIN characters ch ON c.character_id = ch.id
-      WHERE c.id = ? AND c.user_id = ?
-    `).get(req.params.id, req.userId);
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        userId: req.userId
+      },
+      include: {
+        character: {
+          select: {
+            id: true,
+            name: true,
+            personality: true
+          }
+        }
+      }
+    });
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Insert user message
-    const insert = db.prepare(`
-      INSERT INTO messages (conversation_id, role, content, image)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    const result = insert.run(req.params.id, role, content, image || null);
+    // Insert user message and update conversation timestamp
+    const message = await prisma.message.create({
+      data: {
+        conversationId: parseInt(req.params.id),
+        role,
+        content,
+        image: image || null
+      }
+    });
 
     // Update conversation timestamp
-    db.prepare('UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .run(req.params.id);
+    await prisma.conversation.update({
+      where: { id: parseInt(req.params.id) },
+      data: { updatedAt: new Date() }
+    });
 
-    // Get created message
-    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
+    // Format message to match old structure
+    const formattedMessage = {
+      id: message.id,
+      conversation_id: message.conversationId,
+      role: message.role,
+      content: message.content,
+      image: message.image,
+      created_at: message.createdAt
+    };
 
     // If it's a user message, generate AI response
     if (role === 'user') {
       try {
         // Get conversation history
-        const conversationHistory = db.prepare(`
-          SELECT role, content, image FROM messages 
-          WHERE conversation_id = ? 
-          ORDER BY created_at ASC
-        `).all(req.params.id);
+        const conversationHistory = await prisma.message.findMany({
+          where: { conversationId: parseInt(req.params.id) },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            role: true,
+            content: true,
+            image: true
+          }
+        });
 
         // Generate AI response using the AI chat service (with RAG)
         const aiResponseData = await generateCharacterResponse(
-          conversation.character_id,
+          conversation.character.id,
           content,
           conversationHistory,
-          image  // Pass the image to AI
+          image,  // Pass the image to AI
+          req.userId  // Pass userId to enable memory of past conversations
         );
 
         // Extract the message from the response object
         const aiResponse = aiResponseData.message || aiResponseData;
 
         // Save AI response
-        const aiMessageInsert = db.prepare(`
-          INSERT INTO messages (conversation_id, role, content)
-          VALUES (?, 'assistant', ?)
-        `);
-        const aiResult = aiMessageInsert.run(req.params.id, aiResponse);
-        
-        const aiMessage = db.prepare('SELECT * FROM messages WHERE id = ?').get(aiResult.lastInsertRowid);
+        const aiMessage = await prisma.message.create({
+          data: {
+            conversationId: parseInt(req.params.id),
+            role: 'assistant',
+            content: aiResponse
+          }
+        });
+
+        // Format AI message
+        const formattedAiMessage = {
+          id: aiMessage.id,
+          conversation_id: aiMessage.conversationId,
+          role: aiMessage.role,
+          content: aiMessage.content,
+          image: aiMessage.image,
+          created_at: aiMessage.createdAt
+        };
 
         // Return both user message and AI response
         return res.status(201).json({
-          userMessage: message,
-          aiMessage: aiMessage
+          userMessage: formattedMessage,
+          aiMessage: formattedAiMessage
         });
       } catch (aiError) {
         console.error('AI response generation error:', aiError);
@@ -209,14 +334,15 @@ router.post('/:id/messages', verifyUser, async (req, res) => {
         // Return user message even if AI fails
         // The frontend can handle the error
         return res.status(201).json({
-          userMessage: message,
-          error: 'Failed to generate AI response'
+          userMessage: formattedMessage,
+          error: 'Failed to generate AI response',
+          errorMessage: aiError.message
         });
       }
     }
 
     // If it's an assistant message (manual), just return it
-    res.status(201).json({ userMessage: message });
+    res.status(201).json({ userMessage: formattedMessage });
   } catch (error) {
     console.error('Add message error:', error);
     res.status(500).json({ error: 'Failed to add message' });
@@ -224,14 +350,24 @@ router.post('/:id/messages', verifyUser, async (req, res) => {
 });
 
 // Delete conversation
-router.delete('/:id', verifyUser, (req, res) => {
+router.delete('/:id', verifyUser, async (req, res) => {
   try {
-    const deleteStmt = db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?');
-    const result = deleteStmt.run(req.params.id, req.userId);
+    // Check if conversation exists and belongs to user
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        userId: req.userId
+      }
+    });
 
-    if (result.changes === 0) {
+    if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
+
+    // Delete conversation (messages will be cascade deleted based on schema)
+    await prisma.conversation.delete({
+      where: { id: parseInt(req.params.id) }
+    });
 
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {
@@ -241,7 +377,7 @@ router.delete('/:id', verifyUser, (req, res) => {
 });
 
 // Update conversation title
-router.put('/:id', verifyUser, (req, res) => {
+router.put('/:id', verifyUser, async (req, res) => {
   const { title } = req.body;
 
   if (!title) {
@@ -249,15 +385,38 @@ router.put('/:id', verifyUser, (req, res) => {
   }
 
   try {
-    const update = db.prepare('UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?');
-    const result = update.run(title, req.params.id, req.userId);
+    // Check if conversation exists and belongs to user
+    const existingConversation = await prisma.conversation.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        userId: req.userId
+      }
+    });
 
-    if (result.changes === 0) {
+    if (!existingConversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    const conversation = db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
-    res.json(conversation);
+    // Update conversation
+    const conversation = await prisma.conversation.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        title,
+        updatedAt: new Date()
+      }
+    });
+
+    // Format response
+    const formattedConversation = {
+      id: conversation.id,
+      user_id: conversation.userId,
+      character_id: conversation.characterId,
+      title: conversation.title,
+      created_at: conversation.createdAt,
+      updated_at: conversation.updatedAt
+    };
+
+    res.json(formattedConversation);
   } catch (error) {
     console.error('Update conversation error:', error);
     res.status(500).json({ error: 'Failed to update conversation' });

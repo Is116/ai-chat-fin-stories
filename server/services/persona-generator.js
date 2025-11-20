@@ -1,7 +1,26 @@
 const { getGeminiAI, MODELS, CREATIVE_GENERATION_CONFIG } = require('../config/google-cloud');
 const { getBookChunks } = require('./book-processor');
-const db = require('../database');
+const prisma = require('../database');
 
+// Get prompt from database
+async function getPersonaGenerationPrompt() {
+  try {
+    const prompt = await prisma.prompt.findFirst({
+      where: {
+        name: 'persona_generation_prompt',
+        isActive: 1
+      },
+      select: {
+        content: true
+      }
+    });
+    
+    return prompt ? prompt.content : null;
+  } catch (error) {
+    console.warn('Error fetching persona generation prompt:', error.message);
+    return null;
+  }
+}
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -14,17 +33,20 @@ async function generateCharacterPersona(characterId) {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const charStmt = db.prepare('SELECT * FROM characters WHERE id = ?');
-      const character = charStmt.get(characterId);
+      const character = await prisma.character.findUnique({
+        where: { id: characterId },
+        include: {
+          book: true
+        }
+      });
       
       if (!character) {
         throw new Error('Character not found');
       }
 
-      const bookStmt = db.prepare('SELECT * FROM books WHERE id = ?');
-      const book = bookStmt.get(character.book_id);
+      const book = character.book;
       
-      const chunks = getBookChunks(character.book_id);
+      const chunks = await getBookChunks(character.bookId);
       const relevantChunks = chunks.filter(chunk => 
         chunk.chunk_text.toLowerCase().includes(character.name.toLowerCase())
       );
@@ -39,8 +61,22 @@ async function generateCharacterPersona(characterId) {
         generationConfig: CREATIVE_GENERATION_CONFIG,
       });
 
+      // Get prompt from database or use default
+      const promptTemplate = await getPersonaGenerationPrompt() || `Based on this character information and book context, create a detailed AI persona that captures:
+
+1. CHARACTER VOICE AND MANNER OF SPEECH
+2. CORE PERSONALITY TRAITS
+3. WORLDVIEW AND BELIEFS
+4. BACKGROUND KNOWLEDGE
+5. EMOTIONAL PATTERNS
+
+Create a system instruction that enables an AI to authentically roleplay as this character in conversations.`;
+
       const prompt = `
-You are a literary character analysis expert. Create a detailed persona profile for the character "${character.name}" from the book "${book.title}" by ${book.author || 'Unknown'}.
+You are a literary character analysis expert. ${promptTemplate}
+
+Character: "${character.name}"
+Book: "${book.title}" by ${book.author || 'Unknown'}
 
 Analyze the following text excerpts where this character appears and create a comprehensive persona profile.
 
@@ -101,17 +137,29 @@ Return ONLY valid JSON:`;
       const personaData = JSON.parse(jsonMatch[0]);
       const systemInstruction = generateSystemInstruction(character, book, personaData);
 
-      const insertStmt = db.prepare(
-        `INSERT OR REPLACE INTO character_personas 
-         (character_id, persona_json, system_instruction, created_at, updated_at)
-         VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-      );
+      // Upsert persona using Prisma
+      const existingPersona = await prisma.characterPersona.findFirst({
+        where: { characterId: characterId }
+      });
 
-      insertStmt.run(
-        characterId,
-        JSON.stringify(personaData, null, 2),
-        systemInstruction
-      );
+      if (existingPersona) {
+        await prisma.characterPersona.update({
+          where: { id: existingPersona.id },
+          data: {
+            persona: JSON.stringify(personaData, null, 2),
+            context: systemInstruction,
+            updatedAt: new Date()
+          }
+        });
+      } else {
+        await prisma.characterPersona.create({
+          data: {
+            characterId: characterId,
+            persona: JSON.stringify(personaData, null, 2),
+            context: systemInstruction
+          }
+        });
+      }
 
       console.log(`Generated persona for character ${characterId} (${character.name})`);
 
@@ -219,21 +267,38 @@ Your responses should feel AUTHENTIC, PASSIONATE, and TRUE to who ${character.na
 }
 
 
-function getCharacterPersona(characterId) {
-  const stmt = db.prepare('SELECT * FROM character_personas WHERE character_id = ?');
-  const persona = stmt.get(characterId);
+async function getCharacterPersona(characterId) {
+  const persona = await prisma.characterPersona.findFirst({
+    where: { characterId: characterId }
+  });
 
-  if (persona && persona.persona_json) {
-    persona.persona_data = JSON.parse(persona.persona_json);
+  if (!persona) {
+    return null;
   }
 
-  return persona;
+  // Parse the persona JSON and return in the format expected by the caller
+  let personaData = {};
+  try {
+    personaData = JSON.parse(persona.persona);
+  } catch (error) {
+    console.warn(`Failed to parse persona JSON for character ${characterId}:`, error);
+  }
+
+  return {
+    ...persona,
+    persona_data: personaData,
+    character_id: persona.characterId,
+    persona_json: persona.persona,
+    system_instruction: persona.context,
+    created_at: persona.createdAt
+  };
 }
 
 
 async function generateAllPersonasForBook(bookId) {
-  const stmt = db.prepare('SELECT * FROM characters WHERE book_id = ?');
-  const characters = stmt.all(bookId);
+  const characters = await prisma.character.findMany({
+    where: { bookId: bookId }
+  });
 
   const results = [];
   for (const character of characters) {

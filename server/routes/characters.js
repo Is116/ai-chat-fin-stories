@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('../database');
+const prisma = require('../database');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -44,23 +44,48 @@ const upload = multer({
 });
 
 // Get all characters (public)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const characters = db.prepare(`
-      SELECT 
-        c.*,
-        b.title as book_title,
-        b.author as book_author,
-        b.description as book_description,
-        b.cover_image as book_cover_image,
-        b.published_year,
-        b.genre
-      FROM characters c
-      JOIN books b ON c.book_id = b.id
-      ORDER BY b.title, c.name
-    `).all();
-    
-    res.json(characters);
+    const characters = await prisma.character.findMany({
+      include: {
+        book: {
+          select: {
+            title: true,
+            author: true,
+            description: true,
+            coverImage: true,
+            publishedYear: true,
+            genre: true
+          }
+        },
+        extractedCharacters: {
+          select: {
+            description: true
+          },
+          take: 1
+        }
+      },
+      orderBy: [
+        { book: { title: 'asc' } },
+        { name: 'asc' }
+      ]
+    });
+
+    // Transform to match old format
+    const formattedCharacters = characters.map(c => ({
+      ...c,
+      book_title: c.book.title,
+      book_author: c.book.author,
+      book_description: c.book.description,
+      book_cover_image: c.book.coverImage,
+      published_year: c.book.publishedYear,
+      genre: c.book.genre,
+      description: c.extractedCharacters[0]?.description || null,
+      extractedCharacters: undefined,
+      book: undefined
+    }));
+
+    res.json(formattedCharacters);
   } catch (error) {
     console.error('Get characters error:', error);
     res.status(500).json({ error: 'Failed to fetch characters' });
@@ -68,27 +93,49 @@ router.get('/', (req, res) => {
 });
 
 // Get single character (public)
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const character = db.prepare(`
-      SELECT 
-        c.*,
-        b.title as book_title,
-        b.author as book_author,
-        b.description as book_description,
-        b.cover_image as book_cover_image,
-        b.published_year,
-        b.genre
-      FROM characters c
-      JOIN books b ON c.book_id = b.id
-      WHERE c.id = ?
-    `).get(req.params.id);
+    const character = await prisma.character.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        book: {
+          select: {
+            title: true,
+            author: true,
+            description: true,
+            coverImage: true,
+            publishedYear: true,
+            genre: true
+          }
+        },
+        extractedCharacters: {
+          select: {
+            description: true
+          },
+          take: 1
+        }
+      }
+    });
     
     if (!character) {
       return res.status(404).json({ error: 'Character not found' });
     }
+
+    // Transform to match old format
+    const formattedCharacter = {
+      ...character,
+      book_title: character.book.title,
+      book_author: character.book.author,
+      book_description: character.book.description,
+      book_cover_image: character.book.coverImage,
+      published_year: character.book.publishedYear,
+      genre: character.book.genre,
+      description: character.extractedCharacters[0]?.description || null,
+      extractedCharacters: undefined,
+      book: undefined
+    };
     
-    res.json(character);
+    res.json(formattedCharacter);
   } catch (error) {
     console.error('Get character error:', error);
     res.status(500).json({ error: 'Failed to fetch character' });
@@ -96,7 +143,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create character (protected)
-router.post('/', requireAdmin, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), async (req, res) => {
   const { name, book_id, personality, avatar, color, greeting } = req.body;
 
   if (!name || !book_id || !personality || !color || !greeting) {
@@ -105,7 +152,10 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
 
   try {
     // Verify book exists
-    const book = db.prepare('SELECT id FROM books WHERE id = ?').get(book_id);
+    const book = await prisma.book.findUnique({
+      where: { id: parseInt(book_id) }
+    });
+    
     if (!book) {
       return res.status(400).json({ error: 'Invalid book_id' });
     }
@@ -113,24 +163,35 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
     // Get image path if file was uploaded
     const imagePath = req.file ? `/characters/${req.file.filename}` : '';
 
-    const insert = db.prepare(`
-      INSERT INTO characters (name, book_id, personality, avatar, image, color, greeting)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
+    const newCharacter = await prisma.character.create({
+      data: {
+        name,
+        bookId: parseInt(book_id),
+        personality,
+        avatar: avatar || '',
+        image: imagePath,
+        color,
+        greeting
+      },
+      include: {
+        book: {
+          select: {
+            title: true,
+            author: true
+          }
+        }
+      }
+    });
+
+    // Transform to match old format
+    const formattedCharacter = {
+      ...newCharacter,
+      book_title: newCharacter.book.title,
+      book_author: newCharacter.book.author,
+      book: undefined
+    };
     
-    const result = insert.run(name, book_id, personality, avatar || '', imagePath, color, greeting);
-    
-    const newCharacter = db.prepare(`
-      SELECT 
-        c.*,
-        b.title as book_title,
-        b.author as book_author
-      FROM characters c
-      JOIN books b ON c.book_id = b.id
-      WHERE c.id = ?
-    `).get(result.lastInsertRowid);
-    
-    res.status(201).json(newCharacter);
+    res.status(201).json(formattedCharacter);
   } catch (error) {
     console.error('Create character error:', error);
     res.status(500).json({ error: 'Failed to create character' });
@@ -138,19 +199,25 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
 });
 
 // Update character (protected)
-router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
+router.put('/:id', requireAdmin, upload.single('image'), async (req, res) => {
   const { name, book_id, personality, avatar, color, greeting } = req.body;
 
   try {
     // Get existing character to check for old image
-    const existingCharacter = db.prepare('SELECT image FROM characters WHERE id = ?').get(req.params.id);
+    const existingCharacter = await prisma.character.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    
     if (!existingCharacter) {
       return res.status(404).json({ error: 'Character not found' });
     }
 
     // Verify book exists if book_id is being changed
     if (book_id) {
-      const book = db.prepare('SELECT id FROM books WHERE id = ?').get(book_id);
+      const book = await prisma.book.findUnique({
+        where: { id: parseInt(book_id) }
+      });
+      
       if (!book) {
         return res.status(400).json({ error: 'Invalid book_id' });
       }
@@ -172,29 +239,36 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
       }
     }
 
-    const update = db.prepare(`
-      UPDATE characters 
-      SET name = ?, book_id = ?, personality = ?, avatar = ?, image = ?, color = ?, greeting = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+    const updatedCharacter = await prisma.character.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        name,
+        bookId: parseInt(book_id),
+        personality,
+        avatar: avatar || '',
+        image: imagePath,
+        color,
+        greeting
+      },
+      include: {
+        book: {
+          select: {
+            title: true,
+            author: true
+          }
+        }
+      }
+    });
+
+    // Transform to match old format
+    const formattedCharacter = {
+      ...updatedCharacter,
+      book_title: updatedCharacter.book.title,
+      book_author: updatedCharacter.book.author,
+      book: undefined
+    };
     
-    const result = update.run(name, book_id, personality, avatar || '', imagePath, color, greeting, req.params.id);
-    
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Character not found' });
-    }
-    
-    const updatedCharacter = db.prepare(`
-      SELECT 
-        c.*,
-        b.title as book_title,
-        b.author as book_author
-      FROM characters c
-      JOIN books b ON c.book_id = b.id
-      WHERE c.id = ?
-    `).get(req.params.id);
-    
-    res.json(updatedCharacter);
+    res.json(formattedCharacter);
   } catch (error) {
     console.error('Update character error:', error);
     res.status(500).json({ error: 'Failed to update character' });
@@ -202,56 +276,55 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
 });
 
 // Delete character (protected)
-router.delete('/:id', requireAdmin, (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     // Get character details before deletion to delete files
-    const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(req.params.id);
+    const character = await prisma.character.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
     
     if (!character) {
       return res.status(404).json({ error: 'Character not found' });
     }
 
-    // Delete in proper order to avoid foreign key constraints
-    // 1. Delete character persona
-    db.prepare('DELETE FROM character_personas WHERE character_id = ?').run(req.params.id);
+    // Delete the character (Prisma will handle cascade deletes)
+    await prisma.character.delete({
+      where: { id: parseInt(req.params.id) }
+    });
 
-    // 2. Delete messages in conversations with this character
-    const conversations = db.prepare('SELECT id FROM conversations WHERE character_id = ?').all(req.params.id);
-    const conversationIds = conversations.map(c => c.id);
-    
-    if (conversationIds.length > 0) {
-      const placeholders = conversationIds.map(() => '?').join(',');
-      db.prepare(`DELETE FROM messages WHERE conversation_id IN (${placeholders})`).run(...conversationIds);
-      db.prepare(`DELETE FROM conversations WHERE id IN (${placeholders})`).run(...conversationIds);
-    }
+    let filesDeleted = 0;
 
-    // 3. Delete extracted character entries
-    db.prepare('DELETE FROM extracted_characters WHERE character_id = ?').run(req.params.id);
-
-    // 4. Delete the character itself
-    const deleteStmt = db.prepare('DELETE FROM characters WHERE id = ?');
-    const result = deleteStmt.run(req.params.id);
-
-    // 5. Delete character image file if it exists and is not a default SVG
-    if (character.image && character.image.startsWith('/characters/character-')) {
+    // Delete character image file if it exists and is not a default SVG
+    if (character.image && character.image.startsWith('/characters/')) {
       const imagePath = path.join(__dirname, '../../public', character.image);
       if (fs.existsSync(imagePath)) {
         try {
           fs.unlinkSync(imagePath);
           console.log('Deleted character image:', imagePath);
+          filesDeleted++;
         } catch (err) {
           console.error('Error deleting character image:', err);
+        }
+      }
+    }
+
+    // Delete character avatar file if it exists
+    if (character.avatar && character.avatar.startsWith('/characters/')) {
+      const avatarPath = path.join(__dirname, '../../public', character.avatar);
+      if (fs.existsSync(avatarPath)) {
+        try {
+          fs.unlinkSync(avatarPath);
+          console.log('Deleted character avatar:', avatarPath);
+          filesDeleted++;
+        } catch (err) {
+          console.error('Error deleting character avatar:', err);
         }
       }
     }
     
     res.json({ 
       message: 'Character deleted successfully',
-      deleted: {
-        character_id: req.params.id,
-        conversations_deleted: conversations.length,
-        files_deleted: true
-      }
+      files_deleted: filesDeleted
     });
   } catch (error) {
     console.error('Delete character error:', error);

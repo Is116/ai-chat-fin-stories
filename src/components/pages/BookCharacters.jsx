@@ -24,8 +24,8 @@ const BookCharacters = ({ user, onLogout, onSelectCharacter }) => {
       const response = await fetch('http://localhost:3001/api/characters');
       const data = await response.json();
       
-      // Filter characters for this book
-      const bookCharacters = data.filter(char => String(char.book_id) === String(bookId));
+      // Filter characters for this book (use bookId instead of book_id)
+      const bookCharacters = data.filter(char => String(char.bookId) === String(bookId));
       
       if (bookCharacters.length > 0) {
         // Extract book info from first character
