@@ -68,914 +68,112 @@ A full-stack web application that allows users to upload books, extract characte
 - **Node.js** - JavaScript runtime
 - **Express 5.1** - Web framework
 - **Better-SQLite3 12.4** - Embedded database
-- **Passport.js** - Authentication middleware
-- **JWT (jsonwebtoken)** - Token-based auth
-- **Multer** - File upload handling
-- **Express Session** - Session management
-- **BCrypt.js** - Password hashing
+# AI Chat — Book Character Conversations
 
-### AI & ML
-- **Google Gemini AI** - Advanced language model
-- **@google/generative-ai 0.24** - Gemini API SDK
-- **@google-cloud/aiplatform 5.13** - Vertex AI integration
-- **@google-cloud/vertexai 1.10** - Vertex AI SDK
+A concise repository for a web application that lets users upload books (PDFs), extract characters, and chat with character personas. The project includes a React frontend, an Express backend, and utilities for processing PDFs and storing chat history.
 
-### Document Processing
-- **pdf-parse 2.4** - PDF text extraction
-- **canvas 3.2** - Image generation (book covers)
-- **pdfjs-dist 5.4** - PDF parsing
+## Quick Overview
 
-### Utilities
-- **dotenv** - Environment variable management
-- **cors** - Cross-origin resource sharing
-- **concurrently** - Run multiple commands
+- Purpose: Upload books, extract characters and personas, and chat with them.
+- Frontend: React + Vite + Tailwind CSS
+- Backend: Node.js + Express + SQLite (Prisma support present)
+- Screenshots: See the `screenshots/` folder for UI examples included below.
 
----
+## Screenshots
 
-## 📁 Project Structure
+Landing page
+![Landing](/screenshots/landing.jpeg)
 
-```
-ai-chat-fin-stories/
-│
-├── 📂 public/                          # Static assets
-│   ├── 📂 books/                       # Book cover images
-│   │   ├── 📂 pdfs/                    # Uploaded PDF files
-│   │   │   ├── .gitkeep
-│   │   │   └── book-*.pdf
-│   │   ├── .gitkeep
-│   │   └── book-cover-*.png
-│   ├── 📂 characters/                  # Character avatar images
-│   │   ├── .gitkeep
-│   │   └── character-*.png
-│   └── book.svg                        # Placeholder book icon
-│
-├── 📂 server/                          # Backend application
-│   │
-│   ├── 📂 config/                      # Configuration files
-│   │   ├── google-cloud.js             # Google Cloud & Gemini AI config
-│   │   ├── google-cloud-credentials.json # (gitignored) Service account
-│   │   └── passport.js                 # Passport.js OAuth strategies
-│   │
-│   ├── 📂 middleware/                  # Express middleware
-│   │   └── auth.js                     # JWT authentication middleware
-│   │
-│   ├── 📂 routes/                      # API route handlers
-│   │   ├── admin.js                    # Admin panel endpoints
-│   │   ├── ai-processing.js            # AI book/character processing
-│   │   ├── auth.js                     # Local authentication
-│   │   ├── books.js                    # Book CRUD operations
-│   │   ├── characters.js               # Character CRUD operations
-│   │   ├── conversations.js            # Chat conversation endpoints
-│   │   ├── social-auth.js              # Google OAuth routes
-│   │   └── users.js                    # User management
-│   │
-│   ├── 📂 services/                    # Business logic services
-│   │   ├── ai-chat.js                  # Character conversation AI
-│   │   ├── book-processor.js           # Book chunking & processing
-│   │   ├── character-extractor.js      # Extract characters from books
-│   │   └── persona-generator.js        # Generate character personas
-│   │
-│   ├── index.js                        # Express app entry point
-│   ├── database.js                     # SQLite database setup
-│   ├── seed.js                         # Database initialization
-│   │
-│   ├── 📂 migrations/                  # Database migrations
-│   │   ├── add-adminuser.js            # Create admin user
-│   │   ├── migrate-add-ai-tables.js    # AI-related tables
-│   │   ├── migrate-add-language.js     # Language column
-│   │   ├── migrate-add-pdf.js          # PDF file support
-│   │   ├── migrate-add-roles.js        # User roles
-│   │   ├── migrate-add-social-login.js # OAuth fields
-│   │   ├── migrate-books.js            # Books table
-│   │   ├── reset-adminuser-password.js # Admin password reset
-│   │   └── test-adminuser-password.js  # Test admin login
-│   │
-│   └── literary-chat.db                # SQLite database file (gitignored)
-│
-├── 📂 src/                             # Frontend application
-│   │
-│   ├── 📂 components/                  # React components
-│   │   │
-│   │   ├── 📂 admin/                   # Admin panel components
-│   │   │   ├── AdminDashboard.jsx      # Main admin interface
-│   │   │   ├── AdminLogin.jsx          # Admin login page
-│   │   │   └── AIBookProcessing.jsx    # Book processing UI
-│   │   │
-│   │   ├── 📂 pages/                   # Page components
-│   │   │   ├── About.jsx               # About page
-│   │   │   ├── AuthCallback.jsx        # OAuth redirect handler
-│   │   │   ├── BookCharacters.jsx      # Book character listing
-│   │   │   ├── Books.jsx               # All books page
-│   │   │   ├── Contact.jsx             # Contact page
-│   │   │   ├── FAQ.jsx                 # FAQ page
-│   │   │   ├── HowItWorks.jsx          # How it works page
-│   │   │   └── PrivacyPolicy.jsx       # Privacy policy
-│   │   │
-│   │   ├── CharacterCard.jsx           # Character display card
-│   │   ├── CharacterSelection.jsx      # Character picker interface
-│   │   ├── ChatInterface.jsx           # Chat UI component
-│   │   ├── Footer.jsx                  # Site footer
-│   │   ├── Message.jsx                 # Chat message bubble
-│   │   ├── Navbar.jsx                  # Navigation bar
-│   │   ├── UserLogin.jsx               # User login page
-│   │   └── UserSignup.jsx              # User registration page
-│   │
-│   ├── 📂 i18n/                        # Internationalization
-│   │   ├── config.js                   # i18next configuration
-│   │   └── 📂 locales/                 # Translation files
-│   │       ├── en.json                 # English translations
-│   │       └── fi.json                 # Finnish translations
-│   │
-│   ├── 📂 utils/                       # Utility functions
-│   │   └── api.js                      # API helper functions
-│   │
-│   ├── App.jsx                         # Main app component
-│   ├── main.jsx                        # React entry point
-│   └── index.css                       # Global styles
-│
-├── 📄 Configuration Files
-│   ├── .env                            # Environment variables (gitignored)
-│   ├── .gitignore                      # Git ignore rules
-│   ├── index.html                      # HTML template
-│   ├── package.json                    # NPM dependencies
-│   ├── postcss.config.js               # PostCSS configuration
-│   ├── tailwind.config.js              # Tailwind CSS config
-│   └── vite.config.js                  # Vite configuration
-│
-└── 📄 Documentation
-    ├── README.md                       # This file
-    ├── GOOGLE_LOGIN_README.md          # OAuth setup guide
-    └── SOCIAL_LOGIN_*.md               # Social login docs
-```
+Chat interface
+![Chat](/screenshots/chat.jpeg)
 
----
+Character list
+![Characters](/screenshots/characters.jpeg)
 
-## Dependencies
+Admin — users
+![Admin users](/screenshots/admin_users.jpeg)
 
-### Frontend Dependencies
+Admin — books
+![Admin books](/screenshots/admin_books.jpeg)
 
-```json
-{
-  "react": "^18.2.0",                    // UI framework
-  "react-dom": "^18.2.0",                // React DOM rendering
-  "react-router-dom": "^7.9.5",          // Client-side routing
-  "react-i18next": "^16.2.4",            // React i18n bindings
-  "i18next": "^25.6.1",                  // Internationalization
-  "i18next-browser-languagedetector": "^8.2.0", // Auto language detection
-  "lucide-react": "^0.263.1"             // Icon library
-}
-```
+Admin — prompts
+![Admin prompts](/screenshots/admin_prompts.jpeg)
 
-### Backend Dependencies
+Admin — characters
+![Admin characters](/screenshots/admin_characters.jpeg)
 
-```json
-{
-  "express": "^5.1.0",                   // Web framework
-  "better-sqlite3": "^12.4.1",           // SQLite database
-  "cors": "^2.8.5",                      // CORS middleware
-  "dotenv": "^17.2.3",                   // Environment variables
-  "bcryptjs": "^3.0.3",                  // Password hashing
-  "jsonwebtoken": "^9.0.2",              // JWT tokens
-  "multer": "^2.0.2",                    // File uploads
-  "passport": "^0.7.0",                  // Authentication
-  "passport-google-oauth20": "^2.0.0",   // Google OAuth
-  "express-session": "^1.18.2"           // Session management
-}
-```
+## Getting Started
 
-### AI & Processing Dependencies
+Prerequisites
 
-```json
-{
-  "@google/generative-ai": "^0.24.1",    // Gemini AI SDK
-  "@google-cloud/aiplatform": "^5.13.0", // Vertex AI
-  "@google-cloud/vertexai": "^1.10.0",   // Vertex AI SDK
-  "pdf-parse": "^2.4.5",                 // PDF text extraction
-  "canvas": "^3.2.0",                    // Image generation
-  "pdfjs-dist": "^5.4.394"               // PDF parsing
-}
-```
+- Node.js >= 18
+- npm or bun
 
-### Dev Dependencies
-
-```json
-{
-  "@vitejs/plugin-react": "^4.0.0",      // Vite React plugin
-  "vite": "^4.3.9",                      // Build tool
-  "tailwindcss": "^3.3.2",               // CSS framework
-  "autoprefixer": "^10.4.14",            // CSS autoprefixer
-  "postcss": "^8.4.24",                  // CSS processor
-  "concurrently": "^9.2.1"               // Run parallel commands
-}
-```
-
----
-
-## Installation
-
-### Prerequisites
-
-- **Node.js** >= 18.0.0
-- **npm** or **bun** package manager
-- **Google Cloud Account** (for Gemini AI API key)
-
-### Step 1: Clone the Repository
+Install
 
 ```bash
 git clone https://github.com/Is116/ai-chat-fin-stories.git
 cd ai-chat-fin-stories
-```
-
-### Step 2: Install Dependencies
-
-```bash
 npm install
-# or
-bun install
 ```
 
-### Step 3: Environment Setup
+Environment
 
-Create a `.env` file in the root directory:
+Create a `.env` file (copy from `.env.example` if present) and set the following as needed:
 
-```env
-# Server Configuration
-PORT=3001
-NODE_ENV=development
+- `PORT` (backend port)
+- `DATABASE_PATH` (path to SQLite file)
+- OAuth credentials for Google (if using social login)
+- API keys for any AI or cloud services you plan to enable
 
-# Database
-DATABASE_PATH=./server/literary-chat.db
-
-# JWT Configuration
-JWT_SECRET=your-secret-key-change-this-in-production
-SESSION_SECRET=your-session-secret-change-this-in-production
-
-# Frontend URL (for OAuth redirects)
-FRONTEND_URL=http://localhost:3000
-
-# Google OAuth Configuration
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
-
-# Google Cloud Configuration
-GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_APPLICATION_CREDENTIALS=./server/config/google-cloud-credentials.json
-VERTEX_AI_LOCATION=us-central1
-
-# Gemini API Configuration
-GEMINI_API_KEY=your-gemini-api-key
-
-# Frontend Gemini API Key (for chat)
-VITE_GEMINI_API_KEY=your-gemini-api-key
-```
-
-### Step 4: Get Google Gemini API Key
-
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Copy the key to `GEMINI_API_KEY` in `.env`
-
-### Step 5: (Optional) Setup Google OAuth
-
-See `GOOGLE_LOGIN_README.md` for detailed instructions.
-
----
-
-## Configuration
-
-### Database Configuration
-
-The database is automatically initialized on first run. To manually run migrations:
+Run (development)
 
 ```bash
-# Add social login fields
-node server/migrate-add-social-login.js
-
-# Add language support
-node server/migrate-add-language.js
-
-# Add AI tables
-node server/migrate-add-ai-tables.js
-
-# Create admin user
-node server/add-adminuser.js
-```
-
-### Admin User
-
-Default admin credentials:
-- **Username**: `admin`
-- **Password**: `admin123`
-
-**Change these immediately in production!**
-
-### File Upload Limits
-
-Configure in `server/routes/ai-processing.js`:
-
-```javascript
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB
-  }
-});
-```
-
----
-
-## 🏃 Running the Application
-
-### Development Mode
-
-Run frontend and backend concurrently:
-
-```bash
-npm run dev:full
-# or
-bun run dev:full
-```
-
-Or run separately:
-
-```bash
-# Terminal 1 - Frontend (Vite dev server)
+# Frontend
 npm run dev
 
-# Terminal 2 - Backend (Express server)
+# Backend (in another terminal)
 npm run server
+
+# Or run both together (if configured)
+npm run dev:full
 ```
 
-### Production Mode
+Access
 
-```bash
-# Build frontend
-npm run build
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:3001`
 
-# Preview production build
-npm run preview
+## What’s Included
 
-# Run backend
-npm run server
-```
+- Frontend React app in `src/`
+- Backend server in `server/`
+- Prisma schema and seed in `prisma/`
+- Screenshots in `screenshots/` (referenced above)
 
-### Access Points
+## Key Workflows
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
-- **Admin Panel**: http://localhost:3000/admin/dashboard
+- Upload a PDF (frontend -> backend)
+- Process PDF to extract metadata and text chunks
+- Run character extraction to produce character entries and personas
+- Start a chat tied to a character; conversation history is persisted
 
----
+## Development Notes
 
-## API Documentation
+- Database migrations and seeds are available in the `prisma/` folder.
+- Useful scripts are in `package.json` (`dev`, `server`, `build`, `prisma:*`).
 
-### Authentication Endpoints
+## Contributing
 
-#### Local Authentication
-
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "admin",
-  "password": "admin123"
-}
-
-Response: { "token": "jwt-token", "user": {...} }
-```
-
-#### Google OAuth
-
-```http
-GET /api/auth/google
-# Redirects to Google login
-
-GET /api/auth/google/callback
-# OAuth callback handler
-```
-
-### Book Endpoints
-
-```http
-# Get all books
-GET /api/books
-
-# Get single book
-GET /api/books/:id
-
-# Create book (protected, multipart/form-data)
-POST /api/books
-Headers: Authorization: Bearer <token>
-Body: {
-  title, author, description, genre,
-  published_year, cover_image (file),
-  pdf_file (file)
-}
-
-# Update book
-PUT /api/books/:id
-
-# Delete book
-DELETE /api/books/:id
-```
-
-### Character Endpoints
-
-```http
-# Get all characters
-GET /api/characters
-
-# Get characters by book
-GET /api/characters/book/:bookId
-
-# Get single character
-GET /api/characters/:id
-
-# Create character (protected)
-POST /api/characters
-```
-
-### AI Processing Endpoints
-
-```http
-# Analyze PDF for metadata
-POST /api/ai-processing/analyze-book-metadata
-Body: { file: PDF }
-Response: { title, author, description, genre, year, language, cover_image }
-
-# Extract characters from book
-POST /api/ai-processing/process-and-generate/:bookId
-Response: { characters: [...], count: 5 }
-```
-
-### Chat Endpoints
-
-```http
-# Send message to character
-POST /api/conversations/chat
-Body: {
-  characterId, message, conversationId?,
-  image? (base64)
-}
-Response: { reply, conversationId }
-
-# Get conversation history
-GET /api/conversations/:conversationId
-```
-
----
-
-## 🗄 Database Schema
-
-### Users Table
-
-```sql
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE,
-  password TEXT,
-  google_id TEXT UNIQUE,
-  facebook_id TEXT UNIQUE,
-  github_id TEXT UNIQUE,
-  provider TEXT DEFAULT 'local',
-  profile_photo TEXT,
-  role TEXT DEFAULT 'user',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_login DATETIME
-);
-```
-
-### Books Table
-
-```sql
-CREATE TABLE books (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  author TEXT,
-  description TEXT,
-  cover_image TEXT,
-  pdf_file TEXT,
-  genre TEXT,
-  published_year INTEGER,
-  language TEXT DEFAULT 'English',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Characters Table
-
-```sql
-CREATE TABLE characters (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  book_id INTEGER,
-  personality TEXT,
-  avatar TEXT,
-  image TEXT,
-  color TEXT,
-  greeting TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-);
-```
-
-### Conversations Table
-
-```sql
-CREATE TABLE conversations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  character_id INTEGER,
-  message TEXT NOT NULL,
-  response TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (character_id) REFERENCES characters(id)
-);
-```
-
-### Book Chunks Table (RAG)
-
-```sql
-CREATE TABLE book_chunks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  book_id INTEGER NOT NULL,
-  chunk_index INTEGER NOT NULL,
-  chunk_text TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-);
-```
-
-### Character Personas Table
-
-```sql
-CREATE TABLE character_personas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  character_id INTEGER UNIQUE NOT NULL,
-  persona_json TEXT NOT NULL,
-  system_instruction TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
-);
-```
-
----
-
-## 🤖 AI Integration
-
-### Google Gemini AI
-
-The application uses **Google Gemini 2.5 Flash** for:
-
-1. **Book Metadata Extraction**
-   - Analyzes first 3000 characters of PDF
-   - Extracts: title, author, description, genre, year, language
-   - Returns structured JSON
-
-2. **Character Extraction**
-   - Analyzes full book text
-   - Identifies 5 main characters
-   - Extracts personality, description, role
-
-3. **Character Personas**
-   - Deep personality analysis
-   - Speaking style and typical phrases
-   - Relationships, motivations, worldview
-   - Strong opinions and emotional traits
-
-4. **Conversation AI**
-   - Context-aware responses using RAG
-   - Maintains conversation history
-   - Multilingual support
-   - Opinionated personality expressions
-
-### RAG (Retrieval Augmented Generation)
-
-Books are chunked into 2000-character segments for efficient retrieval:
-
-```javascript
-// Book processing
-chunkSize: 2000 characters
-overlap: 200 characters
-storage: book_chunks table
-
-// Context retrieval
-query: user message
-scoring: keyword matching
-limit: top 5 relevant chunks
-```
-
-### AI Configuration
-
-```javascript
-// Gemini models
-GEMINI_PRO: 'gemini-2.0-flash-exp'
-GEMINI_PRO_VISION: 'gemini-2.0-flash-exp'
-
-// Generation config
-temperature: 0.7 (creative)
-topP: 0.8
-topK: 40
-maxOutputTokens: 2048
-```
-
----
-
-## 🌍 Multilingual Support
-
-### Supported Languages
-
-- **English** (en)
-- **Finnish** (fi)
-- **Sinhala** (si)
-- **Spanish** (es)
-- **French** (fr)
-- **German** (de)
-- And more...
-
-### How It Works
-
-1. **UI Translation**: i18next with locale files
-2. **AI Language Detection**: Gemini detects book language
-3. **Response Matching**: Characters respond in user's language
-4. **Fallback Translations**: Language-specific fallbacks
-
-### Adding New Languages
-
-1. Create translation file: `src/i18n/locales/[lang].json`
-2. Add fallback in `server/routes/ai-processing.js`
-3. Update language detection in AI prompts
-
----
-
-## 🔐 Social Authentication
-
-### Google OAuth Setup
-
-1. **Google Cloud Console**
-   - Create project
-   - Enable Google+ API
-   - Create OAuth Client ID
-
-2. **Authorized URLs**
-   - Origins: `http://localhost:3000`
-   - Redirects: `http://localhost:3001/api/auth/google/callback`
-
-3. **Environment Variables**
-   ```env
-   GOOGLE_CLIENT_ID=your-client-id
-   GOOGLE_CLIENT_SECRET=your-secret
-   ```
-
-4. **Flow**
-   - User clicks "Sign in with Google"
-   - Redirects to Google authorization
-   - Google redirects to callback
-   - Backend creates/links user
-   - Generates JWT token
-   - Frontend stores token
-
-### Account Linking
-
-Users with same email across providers are automatically linked.
-
----
-
-## Admin Panel
-
-### Access
-
-Navigate to: `http://localhost:3000/admin/dashboard`
-
-### Features
-
-1. **Books Management**
-   - Upload PDFs
-   - AI metadata extraction
-   - Edit/delete books
-   - View all books
-
-2. **Character Management**
-   - AI character extraction
-   - Generate personas
-   - Edit character details
-   - Manage avatars
-
-3. **User Management**
-   - View all users
-   - Edit user roles
-   - Delete users
-   - View login history
-
-4. **AI Processing**
-   - Analyze PDFs
-   - Extract characters
-   - Generate personas
-   - View processing logs
-
-### Admin Routes
-
-Protected by JWT authentication + role check:
-
-```javascript
-router.use(authenticateToken);
-router.use((req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-  next();
-});
-```
-
----
-
-## File Uploads
-
-### Book Covers
-
-- **Path**: `public/books/`
-- **Format**: PNG
-- **Naming**: `book-cover-{timestamp}-{random}.png`
-- **Generation**: Canvas API with 8 color schemes
-
-### PDF Files
-
-- **Path**: `public/books/pdfs/`
-- **Format**: PDF
-- **Naming**: `book-{timestamp}-{random}.pdf`
-- **Max Size**: 100MB
-
-### Character Avatars
-
-- **Path**: `public/characters/`
-- **Format**: PNG
-- **Source**: DiceBear API (avatars.dicebear.com)
-- **Naming**: `character-{timestamp}-{random}.png`
-
-### Upload Security
-
-```javascript
-// Multer config
-storage: memoryStorage() // No direct disk access
-limits: { fileSize: 100MB }
-fileFilter: PDF only for books
-```
-
----
-
-## UI Components
-
-### Design System
-
-- **Colors**: Gradient backgrounds (purple-blue-pink)
-- **Typography**: System fonts with bold headings
-- **Icons**: Lucide React icon library
-- **Layout**: Responsive grid and flexbox
-- **Animations**: Tailwind transitions and transforms
-
-### Key Components
-
-1. **CharacterSelection**: Grid of character cards
-2. **ChatInterface**: Message list + input
-3. **AdminDashboard**: Tabbed interface (Books, Characters, Users)
-4. **UserLogin**: Form with Google OAuth button
-5. **Navbar**: Responsive navigation with language switcher
-
----
-
-## 🧪 Testing
-
-### Test Admin Login
-
-```bash
-node server/test-adminuser-password.js
-```
-
-### Reset Admin Password
-
-```bash
-node server/reset-adminuser-password.js
-```
-
-### Manual Testing
-
-1. Upload a book PDF
-2. Extract characters using AI
-3. Generate character personas
-4. Start a conversation
-5. Test multilingual responses
-6. Upload image in chat
-7. Test Google OAuth login
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**1. "GEMINI_API_KEY not found"**
-- Add API key to `.env` file
-- Restart server
-
-**2. "Database locked"**
-- Close all database connections
-- Delete `literary-chat.db` and restart
-
-**3. "OAuth redirect mismatch"**
-- Verify callback URL in Google Console
-- Check `FRONTEND_URL` in `.env`
-
-**4. "PDF extraction failed"**
-- Ensure PDF has text (not scanned images)
-- Check file size < 100MB
-
-**5. "Character responses always in English"**
-- Verify language detection in book metadata
-- Check AI prompt includes language instruction
-
----
-
-## Deployment
-
-### Production Checklist
-
-- [ ] Change `JWT_SECRET` and `SESSION_SECRET`
-- [ ] Set `NODE_ENV=production`
-- [ ] Update `FRONTEND_URL` to production domain
-- [ ] Configure Google OAuth production URLs
-- [ ] Enable HTTPS
-- [ ] Set secure cookie options
-- [ ] Configure rate limiting
-- [ ] Set up database backups
-- [ ] Configure logging
-- [ ] Add monitoring (Sentry, etc.)
-
-### Environment Variables
-
-```env
-NODE_ENV=production
-FRONTEND_URL=https://yourdomain.com
-GOOGLE_CALLBACK_URL=https://yourdomain.com/api/auth/google/callback
-```
-
----
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/something`
+3. Commit and push your changes
+4. Open a pull request
 
 ## License
 
-MIT License - see LICENSE file for details
+This project is available under the MIT License — see `LICENSE` for details.
 
----
+## Contact
 
-## 👥 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
----
-
-## Support
-
-For issues and questions:
-- **GitHub Issues**: https://github.com/Is116/ai-chat-fin-stories/issues
-- **Email**: support@example.com
-
----
-
-## Acknowledgments
-
-- Google Gemini AI for powerful language models
-- DiceBear for avatar generation
-- React and Vite communities
-- All open-source contributors
-
----
-
-**Built with using React, Node.js, and Google Gemini AI
-  book: "Book Title",
-  author: "Author Name",
-  personality: "Character description and speaking style...",
-  avatar: "",
-  greeting: "Character's greeting message"
-
-## API Information
-
-This app uses the Anthropic Claude API. The API calls are made directly from the browser without requiring an API key (handled on the backend in the Claude.ai environment).
-
-## License
-
-MIT
-
-## Acknowledgments
-
-- Character personalities inspired by the original literary works
-- Powered by Anthropic's Claude AI
-- Icons by Lucide React
+For questions or issues, open an issue on the repository.
