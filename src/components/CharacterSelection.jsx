@@ -215,7 +215,7 @@ const CharacterSelection = ({ characters, onSelectCharacter, user }) => {
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6 border border-white/20">
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium tracking-wide">Powered by Claude AI</span>
+              <span className="text-sm font-medium tracking-wide">Powered by Gimini AI</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
